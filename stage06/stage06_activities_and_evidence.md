@@ -2,7 +2,7 @@
 
 Complete this one group record. Link actual issues, diffs, tests and reviews; avoid copying entire histories. Blank fields are intentional. Duplicate rows as needed. Use synthetic data only. Every member records their own meaningful contribution. Do not invent results, reviews or Copilot use.
 
-- Group/tutorial: [response]
+- Group/tutorial: [Fri 8:30 Group 1]
 - Members, GitHub usernames and cohorts: [response]
 - Repository URL: [response]
 - Starting SHA: [response]
