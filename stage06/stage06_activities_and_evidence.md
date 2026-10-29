@@ -11,7 +11,7 @@ Complete this one group record. Link actual issues, diffs, tests and reviews; av
 
 ### FR-02 Patient Search
 
-- Title: [response]
+- Title: return the stored patient for a valid patient ID.
 - Context: [response]
 - Requirement: [response]
 - Acceptance criteria: [response]
