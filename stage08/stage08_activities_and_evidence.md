@@ -69,10 +69,10 @@ Traceback — exception/assertion; expected/observed values; test line; call pat
 
 ## C. F8-01 diagnosis and repair
 
-- Symptom / observed behaviour: [complete]
-- Expected behaviour and requirement: [complete]
-- Minimal synthetic reproduction steps: [complete]
-- Meaningful failing test path/name and exact relevant failure: [complete]
+- Symptom / observed behaviour: [Booking D1 twice at 9:00 on 1 Oct 2026 is accepted. No error.]
+- Expected behaviour and requirement: [: The second booking should be rejected with ValueError (FR-05, AC-04.1). A different practitioner at that time should be allowed (AC-04.2).]
+- Minimal synthetic reproduction steps: [gister P1, P2, D1 and D2. Book A1 (P1, D1, 9:00). Book A2 (P2, D1, 9:00).]
+- Meaningful failing test path/name and exact relevant failure: [tests/test_regressions.py::test_f8_01_same_practitioner_same_time_rejected_without_change, which fails with “DID NOT RAISE ValueError”.]
 - Human hypothesis and intended checks: see E, F8-01.
 - Supported root cause and inspected code/runtime evidence: [complete after diagnosis]
 - Smallest justified fix / diff / why other behaviour is preserved: [complete]
@@ -80,10 +80,10 @@ Traceback — exception/assertion; expected/observed values; test line; call pat
 
 ## D. F8-02 diagnosis and repair
 
-- Symptom / observed behaviour: [complete]
-- Expected behaviour and requirement: [complete]
-- Minimal synthetic reproduction steps: [complete]
-- Meaningful failing test path/name and exact relevant failure: [complete]
+- Symptom / observed behaviour: [After cancelling A1, store.find_appointment('A1') returns None.]
+- Expected behaviour and requirement: [A cancelled appointment stays stored and findable, with CANCELLED status (FR-07, FR-08, AC-05.2).]
+- Minimal synthetic reproduction steps: [Register P1 and D1. Book A1. Cancel A1. Look up A1.]
+- Meaningful failing test path/name and exact relevant failure: [tests/test_regressions.py::test_f8_01_same_practitioner_same_time_rejected_without_change, which fails with “DID NOT RAISE ValueError”.]
 - Human hypothesis and intended checks: see E, F8-02.
 - Supported root cause and inspected code/runtime evidence: [complete after diagnosis]
 - Smallest justified fix / diff / why other behaviour is preserved: [complete]
@@ -94,28 +94,49 @@ Traceback — exception/assertion; expected/observed values; test line; call pat
 Complete both entries BEFORE Copilot. C/D supply observed/expected/reproduction/test; retain those initial facts and link them here.
 
 ### F8-01 human entry
-Likely cause and why plausible: [complete]
-Evidence intended to inspect / competing explanation / discriminating check: [complete]
-Member and saved sequence/time or commit showing this preceded consultation: [complete]
+Likely cause and why plausible: [The practitioner ID check in `has_practitioner_conflict` is likely inverted (`!=` instead of `==`), so the method looks for other practitioners' bookings instead of the same practitioner's]
+Evidence intended to inspect / competing explanation / discriminating check: [Evidence intended to inspect / competing explanation / discriminating check: I will inspect the comparison in `has_practitioner_conflict`, the arguments `book_appointment` passes to it, and the F8-01 test result, which fails because the second D1 booking is accepted. A competing explanation is that the store method is correct and the service layer passes the wrong ID or skips the check. To tell these apart, book D1 at 09:00 and call `has_practitioner_conflict` directly. If it returns False for D1 and True for D2, the fault is in the store method. If it returns the correct results, the fault is in the service.]
+Member and saved sequence/time or commit showing this preceded consultation: [u3329873, commit ba0b30cd4ef16eadffeecd5b61e6b257b1d0fab2 ]
 
 ### F8-02 human entry
-Likely cause and why plausible: [complete]
-Evidence intended to inspect / competing explanation / discriminating check: [complete]
-Member and saved sequence/time or commit showing this preceded consultation: [complete]
+Likely cause and why plausible: [`find_appointment` likely filters out cancelled appointments with the condition `status.value != "cancelled"`, so lookup returns `None` even though the appointment is still stored. This is plausible because a cancelled appointment would then seem to disappear, even though nothing removed it from the store.]
+Evidence intended to inspect / competing explanation / discriminating check: [I will inspect the loop condition in `find_appointment`, how `cancel_appointment` changes the stored appointment, and the F8-02 test result, which fails because `find_appointment('A1')` returns `None` after cancelling. A competing explanation is that `cancel_appointment` deletes or replaces the appointment instead of only changing its status. To tell these apart, cancel A1 and check `list_appointments()`. If the same object is still listed with CANCELLED status, the fault is the lookup filter. If it is missing or replaced, the fault is in `cancel_appointment`.]
+Member and saved sequence/time or commit showing this preceded consultation: [u3329873 commit b9ee9441a5c424fe9c7cabac666e49c60ada99ef ]
 
 ## F. GitHub Copilot prompts, findings and human decisions
 
 Use the full handout prompt separately for BOTH defects, after E. Keep each actual prompt or accessible reference; include observed behaviour, expected behaviour, reproduction, failing test, human hypothesis, relevant code, three ranked causes and discriminating checks, with the no-rewrite/no-invented-requirements constraints.
 
 ### F8-01 Copilot review
-Actual prompt / output reference and member: [complete]
+Actual prompt / output reference and member: [prompt: Observed behaviour: Booking A2 for practitioner D1 at 2026-10-01 09:00 succeeds even though A1 is already SCHEDULED for D1 at that time. Booking a different practitioner (D2) at that time is wrongly rejected.
+Expected behaviour: FR-05/AC-04.1 reject the same practitioner at the same time; AC-04.2 allow a different practitioner.
+Steps to reproduce: register P1, P2, D1, D2; book A1 (P1, D1, 09:00); book A2 (P2, D1, 09:00).
+Failing test: tests/test_regressions.py::test_f8_01_same_practitioner_same_time_rejected_without_change - "DID NOT RAISE ValueError"
+Task: Rank the three most likely causes. For each, identify the evidence I should inspect to distinguish it from the other possible causes. Do not rewrite the entire application. Do not invent requirements. Treat all suggested explanations as hypotheses.
+output:Practitioner comparison is inverted (strongest; directly supported by the code). In has_practitioner_conflict, the condition tests whether the stored appointment’s practitioner ID is != practitioner_id. That skips D1’s existing booking when checking another D1 booking, but treats D1’s booking as a conflict when checking D2, matching both observations. Inspect that comparison, then check test_same_practitioner_same_time_conflict_is_rejected and test_different_practitioner_same_time_is_allowed in test_services.py.
+
+The service passes the wrong conflict-check arguments or mishandles the result (possible, but the inspected code argues against it). Inspect the call in services.py: confirm it passes the requested practitioner ID and time, and that a True result raises ValueError. A breakpoint or spy on has_practitioner_conflict during the two bookings would distinguish this from a faulty predicate: capture its arguments and return value for D1 and D2.
+
+The runtime data or loaded module differs from what the report assumes (lower likelihood). Inspect list_appointments() after A1 is booked: its practitioner ID, exact datetime, and status should be D1, 09:00, and SCHEDULED. Also confirm the test is importing the edited workspace’s smartcare.data_store. This would distinguish a state/import mismatch from a logic defect; the current source already shows checks for exact time and SCHEDULED status.
+
+The first hypothesis is the best fit: the current predicate explains both the accepted D1 duplicate and rejected D2 booking. These are ranked hypotheses, not a request to change code.]
 1. Ranked suggestion / evidence check / observed evidence / correct, partly correct or wrong / accept, modify or reject with reason: [complete]
 2. Ranked suggestion / evidence check / observed evidence / correct, partly correct or wrong / accept, modify or reject with reason: [complete]
 3. Ranked suggestion / evidence check / observed evidence / correct, partly correct or wrong / accept, modify or reject with reason: [complete]
 Final human conclusion and comparison with initial hypothesis: [complete]
 
 ### F8-02 Copilot review
-Actual prompt / output reference and member: [complete]
+Actual prompt / output reference and member: [promt: Observed behaviour: After booking and cancelling A1, store.find_appointment('A1') returns None and the service find_appointment raises LookupError. A1 is still in store.list_appointments().
+Expected behaviour: FR-07/FR-08/AC-05.2 — a cancelled appointment is retained and findable as the same object with CANCELLED status.
+Steps to reproduce: register P1, D1; book A1 (P1, D1, 2026-10-01 09:00); cancel A1; call store.find_appointment('A1').
+Failing test: tests/test_regressions.py::test_f8_02_cancelled_appointment_is_retained_and_found - "assert None is <Appointment>"
+Task: Rank the three most likely causes. For each, identify the evidence I should inspect to distinguish it from the other possible causes. Do not rewrite the entire application. Do not invent requirements. Treat all suggested explanations as hypotheses.
+
+output: The store lookup excludes cancelled appointments (strongest). In data_store.py, find_appointment returns a matching ID only when appointment.status.value != "cancelled". That condition filters out A1 precisely when its status is CANCELLED. Inspect the stored A1 after cancellation: if it is the original object and its status is CANCELLED, this confirms the lookup filter as the cause. The existing retained-history assertions in test_services.py also specify that cancelled appointments remain findable.
+
+Cancellation leaves A1 in an unexpected state or replaces it (weaker). The list may contain an appointment under A1, but that alone does not establish it is the original object with CANCELLED status. Compare the listed object with the object returned by booking (is), and inspect its ID and status after cancellation. If it is the original object with CANCELLED status, this hypothesis is ruled out. The current domain cancellation method changes status without deleting the appointment.
+
+Lookup uses a different ID, store instance, or loaded implementation (least likely). Compare the queried ID with the stored appointment ID, check that the store used for list_appointments() is the same one used for find_appointment(), and confirm the test imports this project’s smartcare.data_store. These checks distinguish a lookup-context mismatch from the status filter. Because the store-level lookup itself returns None, the service’s LookupError is likely a consequence, not the primary cause: services.py raises it when the store returns None. These remain hypotheses until the object’s post-cancellation identity/status and lookup path are checked.]
 1. Ranked suggestion / evidence check / observed evidence / correct, partly correct or wrong / accept, modify or reject with reason: [complete]
 2. Ranked suggestion / evidence check / observed evidence / correct, partly correct or wrong / accept, modify or reject with reason: [complete]
 3. Ranked suggestion / evidence check / observed evidence / correct, partly correct or wrong / accept, modify or reject with reason: [complete]
@@ -125,9 +146,9 @@ Final human conclusion and comparison with initial hypothesis: [complete]
 
 | Checkpoint | Code SHA or precise diff | Command and working directory | Actual result and artefact reference |
 |---|---|---|---|
-| F8-01 before repair | [complete] | [complete] | [complete] |
+| F8-01 before repair | [c5200cf] | [python -m pytest -q tests/test_regressions.py] | [FAILED tests/test_regressions.py::test_f8_01_same_practitioner_same_time_rejected_without_change - Failed: DID NOT RAISE ValueError] |
 | F8-01 after repair | [complete] | [complete] | [complete] |
-| F8-02 before repair | [complete] | [complete] | [complete] |
+| F8-02 before repair | [c5200cf] | [python -m pytest -q tests/test_regressions.py] | [FAILED tests/test_regressions.py::test_f8_02_cancelled_appointment_is_retained_and_found - AssertionError: assert None is <smartcare.domain.Appointment object at 0x000001D8F7C951F0>] |
 | F8-02 after repair | [complete] | [complete] | [complete] |
 | Full suite after both repairs, before refactor | [complete] | [complete] | [complete] |
 
