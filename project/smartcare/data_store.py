@@ -98,6 +98,7 @@ class SmartCareDataStore:
         """Return a new list containing all stored appointment objects."""
         return list(self._appointments.values())
 
+
     def has_practitioner_conflict(
         self,
         practitioner_id: str,
@@ -108,6 +109,6 @@ class SmartCareDataStore:
             if (appointment.appointment_id != exclude_appointment_id
                     and appointment.practitioner.practitioner_id == practitioner_id
                     and appointment.date_time == date_time
-                    and appointment.status.value == "scheduled"):
+                    and appointment.status is AppointmentStatus.SCHEDULED):
                 return True
         return False
