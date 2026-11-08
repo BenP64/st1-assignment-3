@@ -5,7 +5,7 @@ import re
 from datetime import datetime
 
 from smartcare.data_store import SmartCareDataStore
-from smartcare.domain import Appointment
+from smartcare.domain import Appointment, AppointmentStatus
 from smartcare.services import (
     AppointmentService,
     PatientService,
@@ -76,4 +76,117 @@ def run_menu() -> None:
     session's data until exit. main.py reports the incomplete menu
     without crashing.
     """
-    raise NotImplementedError('Stage 9 interactive menu is not yet completed')
+    
+    store = SmartCareDataStore()
+    patients = PatientService(store)
+    practitioners = PractitionerService(store)
+    appointments = AppointmentService(store)
+
+    while True:
+        print("\n=== SmartCare Menu ===")
+        print("1. Register patient")
+        print("2. Find patient")
+        print("3. Register practitioner")
+        print("4. Find practitioner")
+        print("5. Book appointment")
+        print("6. Cancel appointment")
+        print("7. Find appointment")
+        print("8. List practitioner appointments")
+        print("0. Exit")
+
+        choice = input("Choose an option: ").strip()
+
+        if choice == "0":
+            print("Goodbye! Session data is not saved.")
+            break
+
+        try:
+            if choice == "1":
+                patient_id = input("Patient ID: ")
+                name = input("Patient name: ")
+                patient = patients.register_patient(patient_id, name)
+                print(f"Registered patient: {patient.patient_id}")
+
+            elif choice == "2":
+                patient_id = input("Patient ID: ")
+                patient = patients.find_patient(patient_id)
+                print(f"Patient: {patient.patient_id} - {patient.name}")
+
+            elif choice == "3":
+                practitioner_id = input("Practitioner ID: ")
+                name = input("Practitioner name: ")
+                specialty = input("Specialty: ")
+                practitioner = practitioners.register_practitioner(
+                    practitioner_id, name, specialty
+                )
+                print(f"Registered practitioner: {practitioner.practitioner_id}")
+
+            elif choice == "4":
+                practitioner_id = input("Practitioner ID: ")
+                practitioner = practitioners.find_practitioner(
+                    practitioner_id
+                )
+                print(
+                    f"Practitioner: {practitioner.practitioner_id} "
+                    f"- {practitioner.name} "
+                    f"({practitioner.specialty})"
+                )
+
+            elif choice == "5":
+                appointment_id = input("Appointment ID: ")
+                patient_id = input("Patient ID: ")
+                practitioner_id = input("Practitioner ID: ")
+                date_text = input("Date/time (YYYY-MM-DD HH:MM): ")
+
+                date_time = parse_date_time(date_text)
+
+                appointment = appointments.book_appointment(
+                    appointment_id,
+                    patient_id,
+                    practitioner_id,
+                    date_time,
+                )
+                print(f"Booked: {format_appointment(appointment)}")
+
+            
+            elif choice == "6":
+                appointment_id = input("Appointment ID: ")
+                appointment = appointments.cancel_appointment(
+                    appointment_id
+                )
+                print(f"Cancelled: {format_appointment(appointment)}")
+
+            elif choice == "7":
+                appointment_id = input("Appointment ID: ")
+                appointment = appointments.find_appointment(
+                    appointment_id
+                )
+                print(format_appointment(appointment))
+
+            elif choice == "8":
+                practitioner_id = input("Practitioner ID: ")
+                status_text = input(
+                    "Status (SCHEDULED/CANCELLED/COMPLETED, blank for all): "
+                ).strip().lower()
+
+                status = (
+                    AppointmentStatus(status_text)
+                    if status_text
+                    else None
+                )
+
+                results = appointments.list_practitioner_appointments(
+                    practitioner_id, status
+                )
+
+                if not results:
+                    print("No matching appointments.")
+                else:
+                    for appointment in results:
+                        print(format_appointment(appointment))
+
+            else:
+                print("Invalid menu choice. Please try again.")
+
+        except (ValueError, LookupError) as error:
+            print(f"Error: {error}")
