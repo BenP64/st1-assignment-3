@@ -18,3 +18,44 @@ The demo registers synthetic records and books/finds an appointment. All supplie
 Stage 6 TODOs: service patient/practitioner lookup and cancellation. Stage 9 TODOs: pure query, named sort key, service listing and interactive menu. The starter TODO contracts are in docstrings. All three Stage 6 TODO calls deliberately raise NotImplementedError; future TODOs remain stubs. No PG rescheduling or assurance solution is supplied.
 
 Service booking accepts IDs and a `datetime` (local, minute precision). Console parser accepts exactly `YYYY-MM-DD HH:MM`. Store lookups return None when absent; service lookups raise LookupError. Invalid values, duplicates, conflicts and illegal transitions raise ValueError. Lists are new containers holding the stored objects. No age, duration, patient-conflict or past-date rules apply.
+
+# Stage 9 - Queries and Console Integration
+SmartCare supports patient and practitioner registration,
+appointment booking, cancellation, lookup, and filtered
+appointment listings.
+
+# Running SmartCare
+Open a terminal in the `project` directory.
+Interactive console:
+`python main.py --interactive`
+
+Demonstration:
+`python main.py`
+
+# Running tests
+From the `project` directory:
+`python -m pytest -q`
+
+# Interactive menu
+1. Register patient
+2. Find patient
+3. Register practitioner
+4. Find practitioner
+5. Book appointment
+6. Cancel appointment
+7. Find appointment
+8. List practitioner appointments
+0. Exit
+
+# Features
+- Appointments are sorted by date/time and appointment ID.
+- Appointments can be filtered by status.
+- Conflicting scheduled appointments for the same practitioner
+  and exact time are rejected.
+- Cancelled appointments remain accessible during the session.
+- Invalid user inputs produce errors without terminating the menu.
+
+# Limitations
+- Data is stored in memory for the current session only.
+- All records are lost when the application exits.
+- There is no database or file persistence.

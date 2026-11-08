@@ -425,3 +425,75 @@ def test_cancelling_one_appointment_leaves_others_scheduled(
 
     assert target.status is AppointmentStatus.CANCELLED
     assert other.status is AppointmentStatus.SCHEDULED
+
+def test_stage9_service_listing_and_history(clinic: Clinic):
+    # A registered practitioner with no bookings gets an empty list.
+    assert clinic.appointments.list_practitioner_appointments("D1") == []
+
+    later = clinic.appointments.book_appointment(
+        "A2", "P1", "D1", datetime(2026, 12, 1, 11, 0)
+    )
+    earlier = clinic.appointments.book_appointment(
+        "A1", "P1", "D1", datetime(2026, 12, 1, 9, 0)
+    )
+    other = clinic.appointments.book_appointment(
+        "A3", "P1", "D2", datetime(2026, 12, 1, 9, 0)
+    )
+
+    clinic.appointments.cancel_appointment("A1")
+
+    result = clinic.appointments.list_practitioner_appointments("D1")
+
+    assert result == [earlier, later]
+    assert result[0] is earlier
+    assert earlier.status is AppointmentStatus.CANCELLED
+
+    # Cancellation does not delete the appointment.
+    assert clinic.appointments.find_appointment("A1") is earlier
+
+    assert clinic.appointments.list_practitioner_appointments(
+        "D1", AppointmentStatus.SCHEDULED
+    ) == [later]
+
+    assert clinic.appointments.list_practitioner_appointments(
+        "D1", AppointmentStatus.CANCELLED
+    ) == [earlier]
+
+    assert clinic.appointments.list_practitioner_appointments(
+        "D1", AppointmentStatus.COMPLETED
+    ) == []
+
+    assert clinic.appointments.list_practitioner_appointments("D2") == [other]
+
+    # Store insertion order remains unchanged.
+    assert clinic.store.list_appointments() == [later, earlier, other]
+
+def test_stage9_service_listing_invalid_inputs(clinic: Clinic):
+    appointment = clinic.appointments.book_appointment(
+        "A1", "P1", "D1", datetime(2026, 12, 1, 9, 0)
+    )
+
+    before = clinic.store.list_appointments()
+
+    # Valid but unregistered practitioner.
+    with pytest.raises(LookupError):
+        clinic.appointments.list_practitioner_appointments("UNKNOWN")
+
+    # Blank practitioner ID.
+    with pytest.raises(ValueError):
+        clinic.appointments.list_practitioner_appointments(" ")
+
+    # Invalid practitioner ID type.
+    with pytest.raises(ValueError):
+        clinic.appointments.list_practitioner_appointments(123)
+
+    # Status must be an AppointmentStatus enum.
+    with pytest.raises(ValueError):
+        clinic.appointments.list_practitioner_appointments(
+            "D1", "scheduled"
+        )
+
+    # Failed requests must not change the stored appointment.
+    assert clinic.store.list_appointments() == before
+    assert clinic.appointments.find_appointment("A1") is appointment
+    assert appointment.status is AppointmentStatus.SCHEDULED

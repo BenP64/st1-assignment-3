@@ -1,0 +1,178 @@
+========================================
+UI-01: Complete workflow
+========================================
+
+========================================
+Part A - Regsiter patients and practitioners
+========================================
+Choose an option: 1
+Patient ID: P1
+Patient name: Alex Example
+Registered patient: P1
+
+Choose an option: 2
+Patient ID: P1
+Patient: P1 - Alex Example
+
+Choose an option: 3
+Practitioner ID: D1
+Practitioner name: Taylor Example
+Specialty: General practice
+Registered practitioner: D1
+
+Choose an option: 4
+Practitioner ID: D1
+Practitioner: D1 - Taylor Example (General practice)
+
+Choose an option: 3
+Practitioner ID: D2
+Practitioner name: Jordan Example
+Specialty: Cardiology
+Registered practitioner: D2
+
+Choose an option: 4
+Practitioner ID: D2
+Practitioner: D2 - Jordan Example (Cardiology)
+
+========================================
+Part B - Booking and conflict rejection
+========================================
+Choose an option: 5
+Appointment ID: A1
+Patient ID: P1
+Practitioner ID: D1
+Date/time (YYYY-MM-DD HH:MM): 2026-10-01 09:00
+Booked: A1: P1 with D1, 2026-10-01 09:00, scheduled
+
+Choose an option: 5
+Appointment ID: A-CONFLICT
+Patient ID: P1
+Practitioner ID: D1
+Date/time (YYYY-MM-DD HH:MM): 2026-10-01 09:00
+Error: Practitioner already has a SCHEDULED appointment at this time
+
+Choose an option: 5
+Appointment ID: A2
+Patient ID: P1
+Practitioner ID: D2
+Date/time (YYYY-MM-DD HH:MM): 2026-10-01 09:00
+Booked: A2: P1 with D2, 2026-10-01 09:00, scheduled
+
+========================================
+Part C - Cancellation and retained history
+========================================
+Choose an option: 6 
+Appointment ID: A1
+Cancelled: A1: P1 with D1, 2026-10-01 09:00, cancelled
+
+Choose an option: 7
+Appointment ID: A1
+A1: P1 with D1, 2026-10-01 09:00, cancelled
+
+Choose an option: 8
+Practitioner ID: D1
+Status (SCHEDULED/CANCELLED/COMPLETED, blank for all): 
+A1: P1 with D1, 2026-10-01 09:00, cancelled
+
+Choose an option: 8
+Practitioner ID: D1
+Status (SCHEDULED/CANCELLED/COMPLETED, blank for all): scheduled
+No matching appointments.
+
+Choose an option: 6
+Appointment ID: A1
+Error: Only SCHEDULED appointments may be cancelled
+
+========================================
+Part D - Book the freed slot
+========================================
+Choose an option: 5
+Appointment ID: A3
+Patient ID: P1
+Practitioner ID: D1
+Date/time (YYYY-MM-DD HH:MM): 2026-10-01 09:00
+Booked: A3: P1 with D1, 2026-10-01 09:00, scheduled
+
+Choose an option: 8
+Practitioner ID: D1
+Status (SCHEDULED/CANCELLED/COMPLETED, blank for all): 
+A1: P1 with D1, 2026-10-01 09:00, cancelled
+A3: P1 with D1, 2026-10-01 09:00, scheduled
+
+Choose an option: 99
+Invalid menu choice. Please try again.
+
+Choose an option: 0
+Goodbye! Session data is not saved.
+
+========================================
+UI-02: Invalid-input recovery
+========================================
+
+Choose an option: 99
+Invalid menu choice. Please try again.
+
+Choose an option: 1
+Patient ID: P1
+Patient name: Another Name
+Registered patient: P1
+
+Choose an option: 2
+Patient ID: 
+Error: Patient ID cannot be blank
+
+Choose an option: 2
+Patient ID: UNKNOWN
+Error: Patient not found
+
+Choose an option: 5
+Appointment ID: BAD
+Patient ID: P1
+Practitioner ID: D1
+Date/time (YYYY-MM-DD HH:MM): random
+Error: Use date/time format YYYY-MM-DD HH:MM
+
+Choose an option: 5
+Appointment ID: BAD
+Patient ID: P1
+Practitioner ID: D1
+Date/time (YYYY-MM-DD HH:MM): 2026-02-30 09:00
+Error: Invalid calendar date/time; use YYYY-MM-DD HH:MM
+
+Choose an option: 5
+Appointment ID: BAD
+Patient ID: UNKNOWN 
+Practitioner ID: D1
+Date/time (YYYY-MM-DD HH:MM): 2026-10-01 10:00
+Error: Patient not found
+
+Choose an option: 7
+Appointment ID: UNKNOWN
+Error: Appointment not found
+
+Choose an option: 8
+Practitioner ID: D1
+Status (SCHEDULED/CANCELLED/COMPLETED, blank for all): pending
+Error: 'pending' is not a valid AppointmentStatus
+
+Choose an option: 6
+Appointment ID: A1
+Cancelled: A1: P1 with D1, 2026-10-01 09:00, cancelled
+
+Choose an option: 6
+Appointment ID: A1
+Error: Only SCHEDULED appointments may be cancelled
+
+Choose an option: 7
+Appointment ID: A1
+A1: P1 with D1, 2026-10-01 09:00, cancelled
+
+Choose an option: 5
+Appointment ID: BAD
+Patient ID: P1
+Practitioner ID: D1
+Date/time (YYYY-MM-DD HH:MM): 2026-10-01 10:00
+Booked: BAD: P1 with D1, 2026-10-01 10:00, scheduled
+
+Choose an option: 0
+Goodbye! Session data is not saved.
