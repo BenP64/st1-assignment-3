@@ -5,8 +5,12 @@ Baseline: Stage 6 foundation, 2026 revision 2. This starter deliberately leaves 
 
 ## Group index
 
-- Group and tutorial: [complete]
-- Member names, GitHub usernames and UG/PG cohorts: [complete]
+- Group and tutorial: Friday 8:30am Group 1
+- Member names, GitHub usernames and UG/PG cohorts: 
+Izayah - IzayahB: Stage 9
+Ben - BenP64: Stage 7
+Lachlan - Lachlano07: Stage 8
+Aadyha - aadhya305: Stage 6
 - Shared repository URL: [complete]
 - Latest completed stage: [complete]
 - Verified code SHA: [complete]

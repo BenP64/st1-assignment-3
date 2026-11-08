@@ -5,10 +5,10 @@ Common UG and PG record. All Assignment 3 stage materials are provided from the 
 Group: Friday 8:30 Tutorial Group-1 
 
 Members and responsibilities:
-U3328698 - IzayahB: Stage 9
-U3333375 - BenP64: Stage 7
-U3329873 - Lachlano07: Stage 8
-U3294151 - aadhya305: Stage 6
+Izayah - IzayahB: Stage 9
+Ben - BenP64: Stage 7
+Lachlan - Lachlano07: Stage 8
+Aadyha - aadhya305: Stage 6
 
 Stage 8 integrated SHA: `645aaef24ed6b04772dea439bf992d7395f1a447` (pending confirmation against `main`)
 Command: `python -m pytest`
@@ -234,15 +234,16 @@ and added test_console_lookup_and_listing_order.
 The focused and full test suites passed.
 Human PR review: Pending.
 
-Integrated common Stage 9 SHA: Integrated common Stage 9 SHA:
-Pending — Stage 9 pull request review and merge into main.
+Integrated common Stage 9 SHA:
+89b7fccb5bb9d4e0bd7660cf57285ce4fafc1e18
 
 Full regression command, working directory, actual count/result and evidence:
 Working directory: `project/`
 Command: `python -m pytest -q`
-Actual result: 85 tests passed, including the Stage 9 query, service and workflow tests.
+Actual result: 85 tests passed, 0.29s
+Tested SHA: 89b7fccb5bb9d4e0bd7660cf57285ce4fafc1e18
 Evidence: [Query tests](../project/tests/test_queries.py), [Service tests](../project/tests/test_services.py), [Workflow tests](../project/tests/test_workflows.py).
-Integrated verification: Pending after teammate review and merge.
+Integration: Stage 9 merged into main and verified.
 
 README run instructions and scope/limitations: README run instructions and scope/limitations:
 [Project README](../project/README.md)
@@ -254,7 +255,7 @@ Support required: Group member review and approval before integration.
 
 UG common candidate / PG future branch plan:
 The completed Stage 9 work will be reviewed, merged into main and verified as the common candidate for the group.
-The integrated Stage 9 SHA will be recorded and protected for Stage 12.
+Stage 9 integrated SHA verified; available for Stage 12
 
 - [x] Query contracts, purity, new lists and named-key ordering verified.
 - [x] Service empty/unknown/invalid cases and cancellation history verified.
@@ -263,6 +264,6 @@ The integrated Stage 9 SHA will be recorded and protected for Stage 12.
 - [ ] Human design, Copilot critique, review and integration recorded honestly.
 - [x] Reflections and ten formative responses completed.
 - [x] README updated; earlier code/tests/records preserved.
-- [ ] Common SHA protected for UG Stage 12; PG Stage 10/11 work deferred until approved.
+- [x] Common SHA protected for UG Stage 12; PG Stage 10/11 work deferred until approved.
 
 No persistence, rescheduling or assurance implementation is part of Stage 9. UG: 6→7→8→9→12. PG: 6→7→8→9→10→11→12. Mixed groups keep one repository and protect the common candidate.
