@@ -12,19 +12,19 @@ All Assignment 3 stage materials are provided from the beginning. Complete this 
 
 For each requirement, propose one positive test, one negative test and the key assertion.
 
-| Requirement                         | Positive test                                                                 | Negative test                                         | Key assertion                                                                                                                                         |
-|-------------------------------------|-------------------------------------------------------------------------------|-------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
-| FR-01 Register patient              | Register P2 in a fresh store that alreadys holds P1.                          | Register "P1" again, with a different name.           | Positive: store.find_patient('P2') is the returned patient. Negative: ValueError is raised AND store.find_patient('P1') is still the original object. |
-| FR-05 Prevent practitioner conflict | Book D2 at 09:00 while D1 already has a scheduled booking.                    | Book D1 again at exactly 09:00 while A1 is SCHEDULED. | Positive: second booking is stored and SCHEDULED. Negative: ValueError, and store.list_appointments() == [first]                                      |
-| FR-06 Cancel appointment            | Cancel a SCHEDULED appointment through AppointmentService.cancel_appointment. | Cancel the same appointment a second time             | Positive: returned object is the booked appointment and its status is AppointmentStatus.CANCELLED. Negative: ValueError and the status is unchanged.  |
-| FR-07 Retain cancelled history      | After cancelling A1, look it up by ID and list all appointments.              | Look up an appointment ID that was never booked.      | Positive: find_appointment('A1') is the original object, status CANCELLED, and it is still in list_appointments(). Negative: LookupError.             |
+| Requirement                         | Positive test                                                    | Negative test                                         | Key assertion                                                                                                                                             |
+|-------------------------------------|------------------------------------------------------------------|-------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------|
+| FR-01 Register patient              | Register P2 in when P1 already exists.                           | Register "P1" again, with a different name.           | Positive: `store.find_patient('P2')` is the returned patient. Negative: ValueError is raised AND `store.find_patient('P1')` is still the original object. |
+| FR-05 Prevent practitioner conflict | Book D2 at 09:00 while D1 already has a scheduled booking.       | Book D1 again at exactly 09:00 while A1 is SCHEDULED. | Positive: second booking is stored and SCHEDULED. Negative: ValueError, and only the first booking is in the list.                                        |
+| FR-06 Cancel appointment            | Cancel a SCHEDULED appointment with `cancel_appointment`.        | Cancel the same appointment a second time             | Positive: Positive: status is CANCELLED. Negative: ValueError and it stays CANCELLED.                                                                     |
+| FR-07 Retain cancelled history      | After cancelling A1, look it up by ID and list all appointments. | Look up an appointment ID that was never booked.      | Positive: A1 is still found and listed and listed as CANCELLED. Negative: LookupError.                                                                    |
 
 ### Activity 2 Strong or weak assertion
 
 For each, select Strong for stated behaviour or Weak/unclear and explain why. State the behaviour and limits.
 
 `assert True`
-Judgement: Weak, Why: It can never fail, so it proves nothing about any behaviour; it only shows the line was reached without an earlier exception.
+Judgement: Weak, Why: It can never fail, so it doesn't test anything.
 
 `assert appointment is not None`
 Judgement: Weak, Why: It shows something was returned, but not that it is the right appointment. So a wrong object would still pass.
@@ -36,292 +36,303 @@ Judgement: Strong, Why: It checks the exact required state change for AC-05.1.
 Judgement:  Weak, Why: Any non-empty list passes, including the wrong records, wrong practitioner or wrong order.
 
 `assert data_store.find_appointment('A1') is appointment`
-Judgement: Strong, Why: It proves the store holds and returns that exact object under ID A1.
+Judgement: Strong, Why: It shows the store saved that exact appoint under A1.
 
 ### Activity 3 Boundary thinking
 
-- **Blank identifiers:** `''` and `'   '` as patient/practitioner/appointment ID : `ValueError`, nothing stored. `' P1 '` trims to `'P1'`, so it is a duplicate of an existing P1. Contract: "IDs are strings, trimmed, non-blank and case-sensitive"
+- **Blank identifiers:** `''` and `'   '` should raise a ValueError and nothing gets saved. `' P1 '` gets trimmed to `'P1'`, so it counts as a duplicate.
 <br></br>
-- **Whitespace-only names/specialty:** `'   '` for name or specialty raises a `ValueError`. e.g. `'  Alex Example  '` is accepted and stored trimmed. Contract: "Required names and specialty are non-blank."
+- **Whitespace-only names/specialty:** `'   '` raises a ValueError. A name with spaces around it like ' John Smith ' is fine and gets trimmed.
+  <br></br>
+- **Same-time practitioner bookings:** Same practitioner at exactly 09:00 is rejected. A different practitioner at 09:00 is fine, and so is the same practitioner at 09:01, since it's only about exact times.
 <br></br>
-- **Same-time practitioner bookings:** same practitioner at exactly 09:00, existing SCHEDULED raises a `ValueError`. Different practitioner at 09:00 is allowed. But same practitioner at 09:01 is allowed, because the rule is "exact time" and there is no duration-overlap rule.
+- **Cancelled appointments:** A CANCELLED 09:00 booking for D1 does not block a new 09:00 booking for D1, the cancelled record can also still be found.
 <br></br>
-- **Cancelled appointments:** a CANCELLED 09:00 booking for D1 does not block a new 09:00 booking for D1, the cancelled record also is still retrievable.
-<br></br>
-- **Invalid status transitions:** CANCELLED -> cancel again raises a `ValueError`, but stays CANCELLED. COMPLETED -> cancel, raises a `ValueError`, and stays COMPLETED.
+- **Invalid status transitions:** Cancelling something already CANCELLED or COMPLETED raises a ValueError and the status does not change.
 
 ### Activity 4 Critique GitHub Copilot tests
 
 GitHub Copilot generates five tests, all of which pass. Two only assert that objects are not None, one asserts True, and two assume SMS notifications exist. Identify what is wrong and rewrite the test intentions.
 
-| Candidate        | What is wrong                                                                                                              | Rewritten test intention                                                                                        |
-|------------------|----------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------|
-| 1 (not None)     | Only shows an object exists, a wrong or unstored object still passes.                                                      | Registering P2 stores it: store.find_patient('P2') is the returned patient and its name is the given name       |
-| 2  (not None)    | For booking it does not check status, participants or storage.                                                             | Booking A1 stores a SCHEDULED appointment linked to the registered P1/D1 objects.                               |
-| 3 (asserts True) | Cannot fail, so it verifies nothing.                                                                                       | Cancelling a SCHEDULED appointment changes its status to CANCELLED and returns the same object.                 |
-| 4 (SMS)          | Invents a notification feature that is not in the requirements, it passes because it asserts something that doesn't exist. | Replace with an actual requirement: repeated cancellation raises ValueError and leaves the status CANCELLED     |
-| 5   (SMS)        | Same invented-requirement problem, tests behaviour SmartCare does not have.                                                | Replace with an actual requirement: a cancelled appointment is still found by ID and listed in the same session |
+| Candidate        | What is wrong                                                              | Rewritten test intention                                                  |
+|------------------|----------------------------------------------------------------------------|---------------------------------------------------------------------------|
+| 1 (not None)     | Only shows an object exists, a wrong or unstored object still passes.      | Registering P2 saves it and `find_patient('P2')` returns that patient.    |
+| 2 (not None)     | For booking it does not check status, participants or storage.             | Booking A1 stores a SCHEDULED appointment linked to the registered P1/D1. |
+| 3 (asserts True) | Cannot fail, so it verifies nothing.                                       | Cancelling a SCHEDULED appointment changes its status to CANCELLED.       |
+| 4 (SMS)          | Creates a notification feature that is not in the requirements.            | Cancelling twice raises a ValueError and it stays CANCELLED.              |
+| 5 (SMS)          | Same created-requirement problem, tests behaviour SmartCare does not have. | A cancelled appointment can still be found by ID.                         |
 
 ### Tutorial exit question
 
 **Why can 100% code coverage coexist with poor software verification?** <br></br>
-Coverage only records which lines ran, not whether any assertion checked the right result. 
+Coverage only records which lines ran, not if the test actually checked the result was right. 
 
 ## B Requirement to Test Traceability Matrix
 
 Assign TEST IDs before implementation or generation. Use canonical AC IDs with their actual meaning; quote supporting revision 2 contracts when no canonical AC is assigned. Blank-ID validation is not AC-01.2. Identify supplied versus student-authored evidence.
 
-| Requirement  | Acceptance criteria                                                                        | Test ID | Test type                                | Test name / location                                                                   | Expected behaviour                                  | Result / observed status | Supplied or student-authored |
-|--------------|--------------------------------------------------------------------------------------------|---------|------------------------------------------|----------------------------------------------------------------------------------------|-----------------------------------------------------|--------------------------|------------------------------|
-| FR-01        | Contract: "IDs are strings, trimmed, non-blank"                                            | ST-01   | Domain unit, negative                    | tests/test_starter.py::test_required_fields                                            | Blank patient ID / blank specialty raise ValueError | Passed                   | Supplied                     |
-| FR-04        | AC-03.1, AC-06.1                                                                           | ST-02   | Service, positive                        | tests/test_starter.py::test_registration_and_booking                                   | Booking stored, SCHEDULED, linked objects           | Passed                   | Supplied                     |
-| FR-01        | AC-01.2                                                                                    | ST-03   | Service, negative                        | tests/test_starter.py::test_duplicate_patient_preserves_original                       | Duplicate P1 rejected, original kept                | Passed                   | Supplied                     |
-| FR-03        | BR-02                                                                                      | ST-04   | Service, negative                        | tests/test_starter.py::test_duplicate_practitioner_preserves_original                  | Duplicate D1 rejected, original kept                | Passed                   | Supplied                     |
-| FR-04        | BR-03                                                                                      | ST-05   | Service, negative                        | tests/test_starter.py::test_duplicate_appointment_preserves_original                   | Duplicate A1 rejected, original kept                | Passed                   | Supplied                     |
-| FR-04        | AC-03.2, BR-04/09                                                                          | ST-06   | Service + store, negative                | tests/test_starter.py::test_unregistered_participants_rejected                         | Unknown/lookalike participant rejected              | Passed                   | Supplied                     |
-| FR-05        | AC-04.1, AC-04.2                                                                           | ST-07   | Service, negative + positive             | tests/test_starter.py::test_conflict_rule_and_different_practitioner                   | Same slot rejected; D2 allowed                      | Passed                   | Supplied                     |
-| FR-06        | AC-05.1, AC-05.3 (domain only)                                                             | ST-08   | Domain via booked object                 | tests/test_starter.py::test_domain_cancellation_and_guard                              | cancel() changes status; repeat rejected            | Passed                   | Supplied                     |
-| FR-01        | AC-01.1 (partial domain evidence)                                                          | TD-01   | Domain unit, positive                    | tests/test_domain.py::test_valid_patient_stores_trimmed_fields                         | Fields kept, trimmed                                | Passed                   | Student-authored             |
-| FR-01        | Contract: "IDs are … trimmed, non-blank"                                                   | TD-02   | Domain unit, negative/boundary (5 cases) | tests/test_domain.py::test_blank_patient_id_is_rejected                                | ValueError for '', spaces, tab/newline, None, int   | Passed                   | Student-authored             |
-| FR-01        | Contract: "Required names … are non-blank"                                                 | TD-03   | Domain unit, negative/boundary (3 cases) | tests/test_domain.py::test_blank_patient_name_is_rejected                              | ValueError                                          | Passed                   | Student-authored             |
-| FR-03        | Partial domain evidence for FR-03                                                          | TD-04   | Domain unit, positive                    | tests/test_domain.py::test_valid_practitioner_stores_trimmed_fields                    | ID, name, specialty kept trimmed                    | Passed                   | Student-authored             |
-| FR-03        | Contract: "Required names and specialty are non-blank"                                     | TD-05   | Domain unit, negative/boundary (6 cases) | tests/test_domain.py::test_blank_practitioner_fields_are_rejected                      | ValueError                                          | Passed                   | Student-authored             |
-| FR-04        | AC-03.1 (partial: initial status)                                                          | TD-06   | Domain unit, positive                    | tests/test_domain.py::test_new_appointment_starts_scheduled                            | SCHEDULED; same participant objects/time            | Passed                   | Student-authored             |
-| FR-04        | BR-04/09 (partial: object types)                                                           | TD-07   | Domain unit, negative                    | tests/test_domain.py::test_appointment_requires_real_participant_objects               | ValueError for IDs or swapped objects               | Passed                   | Student-authored             |
-| FR-04        | Contract: "Timezone-aware values and nonzero seconds/microseconds are invalid"             | TD-08   | Domain unit, negative/boundary (5 cases) | tests/test_domain.py::test_invalid_appointment_time_is_rejected                        | ValueError                                          | Passed                   | Student-authored             |
-| FR-04        | Contract: "local naive datetime values at minute precision"                                | TD-09   | Domain unit, boundary positive           | tests/test_domain.py::test_minute_precision_time_is_accepted                           | 23:59, zero seconds accepted                        | Passed                   | Student-authored             |
-| FR-04        | BR-08                                                                                      | TD-10   | Domain unit, negative                    | tests/test_domain.py::test_non_enum_status_is_rejected                                 | ValueError for status text                          | Passed                   | Student-authored             |
-| FR-06        | Contract: "identity fields are read-only"; "Cancellation uses the public domain operation" | TD-11   | Domain unit, negative                    | tests/test_domain.py::test_identity_and_status_are_read_only                           | AttributeError; values unchanged                    | Passed                   | Student-authored             |
-| FR-06        | AC-05.1 (domain)                                                                           | TD-12   | Domain unit, positive                    | tests/test_domain.py::test_cancel_changes_status                                       | CANCELLED; other fields unchanged                   | Passed                   | Student-authored             |
-| FR-06        | AC-05.3 (domain)                                                                           | TD-13   | Domain unit, negative                    | tests/test_domain.py::test_repeated_cancellation_is_rejected                           | ValueError; stays CANCELLED                         | Passed                   | Student-authored             |
-| FR-06        | BR-06, BR-08                                                                               | TD-14   | Domain unit, negative                    | tests/test_domain.py::test_completed_appointment_cannot_be_cancelled                   | ValueError; stays COMPLETED                         | Passed                   | Student-authored             |
-| FR-01        | AC-01.1                                                                                    | TS-01   | Service, positive                        | tests/test_services.py::test_register_patient_stores_and_returns_same_object           | Stored object is returned object                    | Passed                   | Student-authored             |
-| FR-01        | AC-01.2, BR-01                                                                             | TS-02   | Service, negative/boundary (2 cases)     | tests/test_services.py::test_duplicate_patient_id_is_rejected_without_overwrite        | 'P1' and ' P1 ' rejected; original kept             | Passed                   | Student-authored             |
-| FR-01        | Contract: "IDs are … case-sensitive"                                                       | TS-03   | Service, boundary positive               | tests/test_services.py::test_patient_ids_are_case_sensitive                            | 'p1' registered separately                          | Passed                   | Student-authored             |
-| FR-01        | Contract: invalid inputs raise ValueError; NFR-01                                          | TS-04   | Service, negative (4 cases)              | tests/test_services.py::test_invalid_patient_registration_leaves_store_unchanged       | ValueError; store unchanged                         | Passed                   | Student-authored             |
-| FR-02        | AC-02.1                                                                                    | TS-05   | Service, positive (2 cases)              | tests/test_services.py::test_find_known_patient_returns_stored_object                  | Same object, incl. trimmed ID                       | Passed                   | Student-authored             |
-| FR-02        | AC-02.2                                                                                    | TS-06   | Service, negative                        | tests/test_services.py::test_find_unknown_patient_raises_lookup_error                  | LookupError; nothing created                        | Passed                   | Student-authored             |
-| FR-02        | Contract: blank ID raises ValueError                                                       | TS-07   | Service, negative (2 cases)              | tests/test_services.py::test_find_patient_with_blank_id_raises_value_error             | ValueError                                          | Passed                   | Student-authored             |
-| FR-03        | Supporting lookup: "return the registered practitioner"                                    | TS-08   | Service, positive                        | tests/test_services.py::test_find_known_practitioner_returns_stored_object             | Same object                                         | Passed                   | Student-authored             |
-| FR-03        | Contract: "A valid unknown service lookup raises LookupError"                              | TS-09   | Service, negative                        | tests/test_services.py::test_find_unknown_practitioner_raises_lookup_error             | LookupError; nothing created                        | Passed                   | Student-authored             |
-| FR-04, FR-08 | AC-03.1, AC-06.1, BR-04                                                                    | TS-10   | Service, positive                        | tests/test_services.py::test_book_appointment_stores_scheduled_appointment             | Stored, SCHEDULED, registered objects               | Passed                   | Student-authored             |
-| FR-04        | AC-03.2                                                                                    | TS-11   | Service, negative (2 cases)              | tests/test_services.py::test_booking_unknown_participant_is_rejected                   | LookupError; nothing stored                         | Passed                   | Student-authored             |
-| FR-04        | Datetime contract; NFR-01                                                                  | TS-12   | Service, negative (2 cases)              | tests/test_services.py::test_booking_invalid_time_is_rejected_without_storing          | ValueError; nothing stored                          | Passed                   | Student-authored             |
-| FR-04        | BR-03                                                                                      | TS-13   | Service, boundary negative               | tests/test_services.py::test_duplicate_appointment_id_with_spaces_is_rejected          | ' A1 ' rejected; original kept                      | Passed                   | Student-authored             |
-| FR-08        | Contract: unknown → LookupError, blank → ValueError                                        | TS-14   | Service, negative                        | tests/test_services.py::test_find_unknown_appointment_raises_lookup_error              | LookupError / ValueError                            | Passed                   | Student-authored             |
-| FR-05        | AC-04.1, BR-05                                                                             | TS-15   | Service, negative                        | tests/test_services.py::test_same_practitioner_same_time_conflict_is_rejected          | ValueError; only first stored                       | Passed                   | Student-authored             |
-| FR-05        | AC-04.2                                                                                    | TS-16   | Service, positive                        | tests/test_services.py::test_different_practitioner_same_time_is_allowed               | Both stored, SCHEDULED                              | Passed                   | Student-authored             |
-| FR-05        | BR-05 "exact time"                                                                         | TS-17   | Service, boundary positive               | tests/test_services.py::test_same_practitioner_one_minute_later_is_allowed             | 09:01 booking allowed                               | Passed                   | Student-authored             |
-| FR-05, FR-07 | BR-05 "SCHEDULED", AC-05.2                                                                 | TS-18   | Service, boundary positive               | tests/test_services.py::test_cancelled_booking_does_not_occupy_the_slot                | Slot rebooked; cancelled kept                       | Passed                   | Student-authored             |
-| FR-06        | AC-05.1                                                                                    | TS-19   | Service, positive                        | tests/test_services.py::test_cancel_appointment_changes_status_and_returns_same_object | Same object, CANCELLED                              | Passed                   | Student-authored             |
-| FR-07        | AC-05.2, BR-07                                                                             | TS-20   | Service, positive                        | tests/test_services.py::test_cancelled_appointment_remains_retrievable                 | Found and listed after cancel                       | Passed                   | Student-authored             |
-| FR-06        | AC-05.3, BR-06                                                                             | TS-21   | Service, negative                        | tests/test_services.py::test_repeated_cancellation_is_rejected_without_change          | ValueError; still stored, CANCELLED                 | Passed                   | Student-authored             |
-| FR-06        | BR-06, BR-08                                                                               | TS-22   | Service, negative                        | tests/test_services.py::test_completed_appointment_cancellation_is_rejected            | ValueError; stays COMPLETED                         | Passed                   | Student-authored             |
-| FR-06        | Contract: unknown → LookupError, blank → ValueError; NFR-01                                | TS-23   | Service, negative                        | tests/test_services.py::test_cancel_unknown_or_blank_id_leaves_appointments_unchanged  | Errors raised; A1 stays SCHEDULED                   | Passed                   | Student-authored             |
+ST = supplied starter test, TD/TS = tests.
+
+| Requirement  | Acceptance criteria                                                                                         | Test ID | Test type                       | Test name / location                                                                   | Expected behaviour                                    | Result / observed status | Supplied or student-authored |
+|--------------|-------------------------------------------------------------------------------------------------------------|---------|---------------------------------|----------------------------------------------------------------------------------------|-------------------------------------------------------|--------------------------|------------------------------|
+| FR-01, FR-03 | Contract: "IDs are trimmed, non-blank" and required specialty                                               | ST-01   | Domain, negative                | tests/test_starter.py::test_required_fields                                            | Blank patient ID and blank specialty raise ValueError | Passed                   | Supplied                     |
+| FR-04, FR-08 | AC-03.1, AC-06.1                                                                                            | ST-02   | Service, positive               | tests/test_starter.py::test_registration_and_booking                                   | Booking stored, SCHEDULED, found by ID                | Passed                   | Supplied                     |
+| FR-01        | AC-01.2                                                                                                     | ST-03   | Service, negative               | tests/test_starter.py::test_duplicate_patient_preserves_original                       | Duplicate P1 rejected, original kept                  | Passed                   | Supplied                     |
+| FR-03        | Contract: "Raise ValueError for ... an existing practitioner ID"                                            | ST-04   | Service, negative               | tests/test_starter.py::test_duplicate_practitioner_preserves_original                  | Duplicate D1 rejected, original kept                  | Passed                   | Supplied                     |
+| FR-04        | Contract: "Raise ValueError for ... duplicate appointment IDs"                                              | ST-05   | Service, negative               | tests/test_starter.py::test_duplicate_appointment_preserves_original                   | Duplicate A1 rejected, original kept                  | Passed                   | Supplied                     |
+| FR-04        | AC-03.2                                                                                                     | ST-06   | Service + store, negative       | tests/test_starter.py::test_unregistered_participants_rejected                         | Unknown patient and lookalike patient rejected        | Passed                   | Supplied                     |
+| FR-05        | AC-04.1, AC-04.2                                                                                            | ST-07   | Service, negative + positive    | tests/test_starter.py::test_conflict_rule_and_different_practitioner                   | Same slot rejected, D2 allowed                        | Passed                   | Supplied                     |
+| FR-06        | AC-05.1, AC-05.3 (domain only)                                                                              | ST-08   | Domain, on a booked appointment | tests/test_starter.py::test_domain_cancellation_and_guard                              | cancel() works, second cancel rejected                | Passed                   | Supplied                     |
+| FR-01        | AC-01.1 (partial, domain only)                                                                              | TD-01   | Domain, positive                | tests/test_domain.py::test_valid_patient_stores_trimmed_fields                         | ID and name kept, trimmed                             | Passed                   | Student-authored             |
+| FR-01        | Contract: "IDs are trimmed, non-blank"                                                                      | TD-02   | Domain, negative/boundary       | tests/test_domain.py::test_blank_patient_id_is_rejected                                | ValueError                                            | Passed (5)               | Student-authored             |
+| FR-01        | Contract: "trimmed non-blank text" (name)                                                                   | TD-03   | Domain, negative/boundary       | tests/test_domain.py::test_blank_patient_name_is_rejected                              | ValueError                                            | Passed (3)               | Student-authored             |
+| FR-03        | Partial domain evidence                                                                                     | TD-04   | Domain, positive                | tests/test_domain.py::test_valid_practitioner_stores_trimmed_fields                    | ID, name, specialty kept, trimmed                     | Passed                   | Student-authored             |
+| FR-03        | Contract: "trimmed non-blank text" (ID, name, specialty)                                                    | TD-05   | Domain, negative/boundary       | tests/test_domain.py::test_blank_practitioner_fields_are_rejected                      | ValueError                                            | Passed (6)               | Student-authored             |
+| FR-04        | AC-03.1 (partial, initial status)                                                                           | TD-06   | Domain, positive                | tests/test_domain.py::test_new_appointment_starts_scheduled                            | SCHEDULED, keeps given objects and time               | Passed                   | Student-authored             |
+| FR-04        | Contract: "IDs are trimmed, non-blank"                                                                      | TD-07   | Domain, negative/boundary       | tests/test_domain.py::test_blank_appointment_id_is_rejected                            | ValueError                                            | Passed (3)               | Student-authored             |
+| FR-04        | Contract: "Invalid values ... raise ValueError" (participants)                                              | TD-08   | Domain, negative                | tests/test_domain.py::test_appointment_requires_real_participant_objects               | ValueError for IDs or swapped objects                 | Passed                   | Student-authored             |
+| FR-04        | Contract: "naive, minute-precision datetime; otherwise raise ValueError"                                    | TD-09   | Domain, negative/boundary       | tests/test_domain.py::test_invalid_appointment_time_is_rejected                        | ValueError                                            | Passed (5)               | Student-authored             |
+| FR-04        | Contract: "local, minute precision"                                                                         | TD-10   | Domain, boundary positive       | tests/test_domain.py::test_minute_precision_time_is_accepted                           | 23:59 accepted                                        | Passed                   | Student-authored             |
+| FR-04        | Contract: "Invalid values ... raise ValueError" (status)                                                    | TD-11   | Domain, negative                | tests/test_domain.py::test_non_enum_status_is_rejected                                 | ValueError for text status                            | Passed                   | Student-authored             |
+| FR-06        | Contract: "read-only identity/appointment state; changes go through domain methods"                         | TD-12   | Domain, negative                | tests/test_domain.py::test_identity_and_status_are_read_only                           | AttributeError, values unchanged                      | Passed                   | Student-authored             |
+| FR-06        | AC-05.1 (domain)                                                                                            | TD-13   | Domain, positive                | tests/test_domain.py::test_cancel_changes_status                                       | CANCELLED, other fields unchanged                     | Passed                   | Student-authored             |
+| FR-06        | AC-05.3 (domain)                                                                                            | TD-14   | Domain, negative                | tests/test_domain.py::test_repeated_cancellation_is_rejected                           | ValueError, stays CANCELLED                           | Passed                   | Student-authored             |
+| FR-06        | Contract: "Only SCHEDULED appointments may be cancelled"                                                    | TD-15   | Domain, negative                | tests/test_domain.py::test_completed_appointment_cannot_be_cancelled                   | ValueError, stays COMPLETED                           | Passed                   | Student-authored             |
+| FR-01        | AC-01.1                                                                                                     | TS-01   | Service, positive               | tests/test_services.py::test_register_patient_stores_and_returns_same_object           | Stored object is the returned object                  | Passed                   | Student-authored             |
+| FR-01        | AC-01.2                                                                                                     | TS-02   | Service, negative/boundary      | tests/test_services.py::test_duplicate_patient_id_is_rejected_without_overwrite        | 'P1' and ' P1 ' rejected, original kept               | Passed (2)               | Student-authored             |
+| FR-01        | Contract: "IDs are ... case-sensitive"                                                                      | TS-03   | Service, boundary positive      | tests/test_services.py::test_patient_ids_are_case_sensitive                            | 'p1' registered as a separate patient                 | Passed                   | Student-authored             |
+| FR-01        | Contract: "Raise ValueError for invalid fields"                                                             | TS-04   | Service, negative               | tests/test_services.py::test_invalid_patient_registration_leaves_store_unchanged       | ValueError, store unchanged                           | Passed (4)               | Student-authored             |
+| FR-02        | AC-02.1                                                                                                     | TS-05   | Service, positive               | tests/test_services.py::test_find_known_patient_returns_stored_object                  | Same object, also with ' P1 '                         | Passed (2)               | Student-authored             |
+| FR-02        | AC-02.2                                                                                                     | TS-06   | Service, negative               | tests/test_services.py::test_find_unknown_patient_raises_lookup_error                  | LookupError, nothing created                          | Passed                   | Student-authored             |
+| FR-02        | Contract: "Raise ValueError for a blank or invalid ID"                                                      | TS-07   | Service, negative               | tests/test_services.py::test_find_patient_with_blank_id_raises_value_error             | ValueError                                            | Passed (2)               | Student-authored             |
+| FR-03        | Practitioner lookup (supporting): "Return the stored practitioner for a valid practitioner ID"              | TS-08   | Service, positive               | tests/test_services.py::test_find_known_practitioner_returns_stored_object             | Same object                                           | Passed                   | Student-authored             |
+| FR-03        | Practitioner lookup (supporting): "LookupError when no practitioner is registered under it"                 | TS-09   | Service, negative               | tests/test_services.py::test_find_unknown_practitioner_raises_lookup_error             | LookupError, nothing created                          | Passed                   | Student-authored             |
+| FR-03        | Practitioner lookup (supporting): "Raise ValueError for a blank or invalid ID"                              | TS-10   | Service, negative               | tests/test_services.py::test_find_practitioner_with_blank_id_raises_value_error        | ValueError                                            | Passed                   | Student-authored             |
+| FR-03        | Contract: "Raise ValueError for ... an existing practitioner ID"                                            | TS-11   | Service, boundary negative      | tests/test_services.py::test_duplicate_practitioner_id_with_spaces_is_rejected         | ' D1 ' rejected, original kept                        | Passed                   | Student-authored             |
+| FR-04, FR-08 | AC-03.1, AC-06.1                                                                                            | TS-12   | Service, positive               | tests/test_services.py::test_book_appointment_stores_scheduled_appointment             | Stored, SCHEDULED, registered objects, found by ID    | Passed                   | Student-authored             |
+| FR-04        | AC-03.2                                                                                                     | TS-13   | Service, negative               | tests/test_services.py::test_booking_unknown_participant_is_rejected                   | LookupError, nothing stored                           | Passed (2)               | Student-authored             |
+| FR-04        | Contract: "minute-precision datetime; otherwise raise ValueError"                                           | TS-14   | Service, negative               | tests/test_services.py::test_booking_invalid_time_is_rejected_without_storing          | ValueError, nothing stored                            | Passed (2)               | Student-authored             |
+| FR-04        | Contract: "Raise ValueError for ... duplicate appointment IDs"                                              | TS-15   | Service, boundary negative      | tests/test_services.py::test_duplicate_appointment_id_with_spaces_is_rejected          | ' A1 ' rejected, original kept                        | Passed                   | Student-authored             |
+| FR-08        | Contract: "raise LookupError when absent. Reject a blank or invalid ID with ValueError"                     | TS-16   | Service, negative               | tests/test_services.py::test_find_unknown_appointment_raises_lookup_error              | LookupError / ValueError                              | Passed                   | Student-authored             |
+| FR-05        | AC-04.1                                                                                                     | TS-17   | Service, negative               | tests/test_services.py::test_same_practitioner_same_time_conflict_is_rejected          | ValueError, only first stored                         | Passed                   | Student-authored             |
+| FR-05        | AC-04.2                                                                                                     | TS-18   | Service, positive               | tests/test_services.py::test_different_practitioner_same_time_is_allowed               | Both stored, SCHEDULED                                | Passed                   | Student-authored             |
+| FR-05        | Contract: "No ... duration ... rules apply" (exact time only)                                               | TS-19   | Service, boundary positive      | tests/test_services.py::test_same_practitioner_one_minute_later_is_allowed             | 09:01 booking allowed                                 | Passed                   | Student-authored             |
+| FR-05, FR-07 | Contract: "another SCHEDULED appointment" counts as a conflict; AC-05.2                                     | TS-20   | Service, boundary positive      | tests/test_services.py::test_cancelled_booking_does_not_occupy_the_slot                | Slot rebooked, cancelled one kept                     | Passed                   | Student-authored             |
+| FR-06        | AC-05.1                                                                                                     | TS-21   | Service, positive               | tests/test_services.py::test_cancel_appointment_changes_status_and_returns_same_object | Same object, CANCELLED                                | Passed                   | Student-authored             |
+| FR-07        | AC-05.2                                                                                                     | TS-22   | Service, positive               | tests/test_services.py::test_cancelled_appointment_remains_retrievable                 | Found and listed after cancel                         | Passed                   | Student-authored             |
+| FR-06        | AC-05.3                                                                                                     | TS-23   | Service, negative               | tests/test_services.py::test_repeated_cancellation_is_rejected_without_change          | ValueError, still stored and CANCELLED                | Passed                   | Student-authored             |
+| FR-06        | Contract: "invalid transitions (already cancelled or completed) raise ValueError and leave state unchanged" | TS-24   | Service, negative               | tests/test_services.py::test_completed_appointment_cancellation_is_rejected            | ValueError, stays COMPLETED                           | Passed                   | Student-authored             |
+| FR-06        | Contract: "Unknown IDs raise LookupError; blank IDs ... raise ValueError"                                   | TS-25   | Service, negative               | tests/test_services.py::test_cancel_unknown_or_blank_id_leaves_appointments_unchanged  | Errors raised, A1 stays SCHEDULED                     | Passed                   | Student-authored             |
+| FR-06        | AC-05.1                                                                                                     | TS-26   | Service, positive               | tests/test_services.py::test_cancelling_one_appointment_leaves_others_scheduled        | Only A1 is cancelled, A2 stays SCHEDULED              | Passed                   | Student-authored             |
 ## C Test Design
 
 Use descriptive test names such as test_cancel_changes_status() or test_blank_patient_id_is_rejected(). Explain what new evidence each case adds.
 
-| Test ID | Requirement | Acceptance criteria         | Positive/Negative/Boundary | Test intention                                       | Observable result expected                      | Added evidence beyond supplied tests                                  |
-|---------|-------------|-----------------------------|----------------------------|------------------------------------------------------|-------------------------------------------------|-----------------------------------------------------------------------|
-| TD-01   | FR-01       | AC-01.1 (partial)           | Positive                   | Construction keeps trimmed values                    | `patient_id == 'P1'`, `name == 'Alex Example'`  | Supplied tests never check trimming                                   |
-| TD-02   | FR-01       | Validation contract         | Negative/Boundary          | Every kind of invalid ID is rejected                 | ValueError ×5                                   | Supplied checks only `' '`; adds empty, tab/newline, None, non-string |
-| TD-03   | FR-01       | Validation contract         | Negative/Boundary          | Name is required                                     | ValueError                                      | Not covered by supplied tests                                         |
-| TD-04   | FR-03       | Partial                     | Positive                   | Practitioner fields kept trimmed                     | Three trimmed fields                            | Not covered                                                           |
-| TD-05   | FR-03       | Validation contract         | Negative/Boundary          | Each required field checked separately               | ValueError ×6                                   | Supplied checks only empty specialty                                  |
-| TD-06   | FR-04       | AC-03.1 (partial)           | Positive                   | New appointment is SCHEDULED, keeps objects          | `status is SCHEDULED`, identity of participants | Isolates the domain rule from the service                             |
-| TD-07   | FR-04       | BR-04/09 (partial)          | Negative                   | IDs or swapped objects are not accepted              | ValueError ×3                                   | Not covered                                                           |
-| TD-08   | FR-04       | Datetime contract           | Negative/Boundary          | tz-aware, seconds, microseconds, text, None rejected | ValueError ×5                                   | Not covered                                                           |
-| TD-09   | FR-04       | Datetime contract           | Boundary                   | Partner of TD-08: valid minute time accepted         | `date_time == edge`                             | Shows TD-08 rejects for the right reason                              |
-| TD-10   | FR-04       | BR-08                       | Negative                   | Status must be an enum                               | ValueError                                      | Not covered                                                           |
-| TD-11   | FR-06       | Read-only identity contract | Negative                   | Identity/status cannot be overwritten                | AttributeError; values unchanged                | Not covered                                                           |
-| TD-12   | FR-06       | AC-05.1 (domain)            | Positive                   | cancel() changes only status                         | CANCELLED, other fields same                    | Supplied test does not check other fields                             |
-| TD-13   | FR-06       | AC-05.3 (domain)            | Negative                   | Second cancel rejected                               | ValueError; still CANCELLED                     | Kept as required reference intention                                  |
-| TD-14   | FR-06       | BR-06/08                    | Negative                   | COMPLETED cannot be cancelled                        | ValueError; still COMPLETED                     | Not covered                                                           |
-| TS-01   | FR-01       | AC-01.1                     | Positive                   | Registration stores through the service              | Store returns same object                       | Supplied only registers inside a helper, never asserts it             |
-| TS-02   | FR-01       | AC-01.2                     | Negative/Boundary          | Duplicate (incl. spaced) rejected                    | ValueError; original kept                       | Adds the trimmed duplicate case                                       |
-| TS-03   | FR-01       | Case-sensitive contract     | Boundary                   | 'p1' is a distinct ID                                | Both stored separately                          | Not covered                                                           |
-| TS-04   | FR-01       | Validation contract, NFR-01 | Negative                   | Bad registration leaves store unchanged              | ValueError; list unchanged                      | Not covered                                                           |
-| TS-05   | FR-02       | AC-02.1                     | Positive                   | Lookup returns the stored object                     | `is clinic.patient`                             | Stage 6 TODO; not in supplied tests                                   |
-| TS-06   | FR-02       | AC-02.2                     | Negative                   | Unknown ID reports absence                           | LookupError; nothing created                    | Stage 6 TODO                                                          |
-| TS-07   | FR-02       | Validation contract         | Negative                   | Blank ID is a ValueError, not LookupError            | ValueError                                      | Checks the two error types are distinguished                          |
-| TS-08   | FR-03       | Supporting lookup           | Positive                   | Lookup returns stored practitioner                   | `is clinic.doctor`                              | Stage 6 TODO                                                          |
-| TS-09   | FR-03       | Lookup contract             | Negative                   | Unknown ID → LookupError                             | LookupError; nothing created                    | Stage 6 TODO                                                          |
-| TS-10   | FR-04/08    | AC-03.1, AC-06.1            | Positive                   | Full booking evidence                                | SCHEDULED, registered objects, found by ID      | Adds date/time and list checks                                        |
-| TS-11   | FR-04       | AC-03.2                     | Negative                   | Unknown patient and practitioner each block booking  | LookupError; nothing stored                     | Supplied checks unknown patient only                                  |
-| TS-12   | FR-04       | Datetime contract           | Negative                   | Invalid time leaves no partial booking               | ValueError; empty list                          | Not covered                                                           |
-| TS-13   | FR-04       | BR-03                       | Boundary                   | Spaced duplicate appointment ID rejected             | ValueError; original unchanged                  | Adds trimmed case                                                     |
-| TS-14   | FR-08       | Lookup contract             | Negative                   | Unknown vs blank appointment ID                      | LookupError / ValueError                        | Not covered                                                           |
-| TS-15   | FR-05       | AC-04.1                     | Negative                   | Exact conflict rejected without side effects         | ValueError; only first stored                   | Supplied test does not check state after rejection                    |
-| TS-16   | FR-05       | AC-04.2                     | Positive                   | Other practitioner allowed                           | Both stored                                     | Adds list check                                                       |
-| TS-17   | FR-05       | BR-05 exact time            | Boundary                   | One minute later is not a conflict                   | Booking stored                                  | Not covered                                                           |
-| TS-18   | FR-05/07    | BR-05, AC-05.2              | Boundary                   | Cancelled booking frees the slot                     | Rebooking succeeds; old record kept             | Not covered                                                           |
-| TS-19   | FR-06       | AC-05.1                     | Positive                   | Service cancel returns same object                   | `result is booked`, CANCELLED                   | Stage 6 TODO                                                          |
-| TS-20   | FR-07       | AC-05.2                     | Positive                   | History retained after cancel                        | Found and listed                                | Stage 6 TODO                                                          |
-| TS-21   | FR-06       | AC-05.3                     | Negative                   | Repeat cancel through service                        | ValueError; still stored                        | Stage 6 TODO                                                          |
-| TS-22   | FR-06       | BR-06/08                    | Negative                   | COMPLETED cannot be cancelled via service            | ValueError; stays COMPLETED                     | Not covered                                                           |
-| TS-23   | FR-06       | Cancel contract, NFR-01     | Negative                   | Unknown/blank ID error types, no side effect         | LookupError, ValueError; A1 SCHEDULED           | Not covered                                                           |
+| Test ID | Requirement | Acceptance criteria              | Positive/Negative/Boundary | Test intention                                       | Observable result expected             | Added evidence beyond supplied tests                                |
+|---------|-------------|----------------------------------|----------------------------|------------------------------------------------------|----------------------------------------|---------------------------------------------------------------------|
+| TD-01   | FR-01       | AC-01.1 (partial)                | Positive                   | Valid patient is created                             | ID and name trimmed                    | Supplied tests don't check trimming                                 |
+| TD-02   | FR-01       | ID contract                      | Negative/Boundary          | Bad patient IDs are rejected                         | ValueError                             | Supplied only tries `' '`; we add `''`, tab/newline, None, a number |
+| TD-03   | FR-01       | Text contract                    | Negative/Boundary          | Patient name is required                             | ValueError                             | Not covered                                                         |
+| TD-04   | FR-03       | Partial                          | Positive                   | Valid practitioner is created                        | Three fields trimmed                   | Not covered                                                         |
+| TD-05   | FR-03       | Text contract                    | Negative/Boundary          | Each practitioner field checked on its own           | ValueError                             | Supplied only tries an empty specialty                              |
+| TD-06   | FR-04       | AC-03.1 (partial)                | Positive                   | New appointment starts SCHEDULED                     | SCHEDULED, same objects and time       | Tests the domain without the service                                |
+| TD-07   | FR-04       | ID contract                      | Negative/Boundary          | Appointment ID is required                           | ValueError                             | Not covered                                                         |
+| TD-08   | FR-04       | Participant contract             | Negative                   | Plain IDs or swapped objects not allowed             | ValueError                             | Not covered                                                         |
+| TD-09   | FR-04       | Datetime contract                | Negative/Boundary          | Timezone, seconds, microseconds, text, None rejected | ValueError                             | Not covered                                                         |
+| TD-10   | FR-04       | Datetime contract                | Boundary                   | A normal minute time is accepted                     | `date_time == edge`                    | Shows TD-09 isn't just rejecting everything                         |
+| TD-11   | FR-04       | Status contract                  | Negative                   | Status has to be the enum                            | ValueError                             | Not covered                                                         |
+| TD-12   | FR-06       | Read-only contract               | Negative                   | IDs and status can't be overwritten                  | AttributeError, values same            | Not covered                                                         |
+| TD-13   | FR-06       | AC-05.1                          | Positive                   | cancel() only changes the status                     | CANCELLED, other fields same           | Supplied doesn't check other fields                                 |
+| TD-14   | FR-06       | AC-05.3                          | Negative                   | Second cancel rejected                               | ValueError, still CANCELLED            | Kept as a required reference test                                   |
+| TD-15   | FR-06       | Status guard                     | Negative                   | COMPLETED can't be cancelled                         | ValueError, still COMPLETED            | Not covered                                                         |
+| TS-01   | FR-01       | AC-01.1                          | Positive                   | Register saves through the service                   | Store returns same object              | Supplied registers in a helper but never checks it                  |
+| TS-02   | FR-01       | AC-01.2                          | Negative/Boundary          | Duplicate rejected, including with spaces            | ValueError, original kept              | Adds the `' P1 '` case                                              |
+| TS-03   | FR-01       | ID contract                      | Boundary                   | 'p1' is a different ID to 'P1'                       | Both stored                            | Not covered                                                         |
+| TS-04   | FR-01       | Validation contract              | Negative                   | Bad registration saves nothing                       | ValueError, list unchanged             | Not covered                                                         |
+| TS-05   | FR-02       | AC-02.1                          | Positive                   | Find a known patient                                 | Same object                            | Stage 6 TODO, not in supplied tests                                 |
+| TS-06   | FR-02       | AC-02.2                          | Negative                   | Find an unknown patient                              | LookupError                            | Stage 6 TODO                                                        |
+| TS-07   | FR-02       | Lookup contract                  | Negative                   | Blank ID is ValueError, not LookupError              | ValueError                             | Checks the two errors are kept separate                             |
+| TS-08   | FR-03       | Practitioner lookup              | Positive                   | Find a known practitioner                            | Same object                            | Stage 6 TODO                                                        |
+| TS-09   | FR-03       | Practitioner lookup              | Negative                   | Find an unknown practitioner                         | LookupError                            | Stage 6 TODO                                                        |
+| TS-10   | FR-03       | Practitioner lookup              | Negative                   | Blank practitioner ID                                | ValueError                             | Stage 6 TODO                                                        |
+| TS-11   | FR-03       | Duplicate contract               | Boundary                   | `' D1 '` counts as a duplicate                       | ValueError, original kept              | Supplied only tries `'D1'`                                          |
+| TS-12   | FR-04/08    | AC-03.1, AC-06.1                 | Positive                   | Booking is saved properly                            | SCHEDULED, right objects, found by ID  | Adds time and lookup checks                                         |
+| TS-13   | FR-04       | AC-03.2                          | Negative                   | Unknown patient or practitioner                      | LookupError, nothing saved             | Supplied only tries an unknown patient                              |
+| TS-14   | FR-04       | Datetime contract                | Negative                   | Bad time saves nothing                               | ValueError, empty list                 | Not covered                                                         |
+| TS-15   | FR-04       | Duplicate contract               | Boundary                   | `' A1 '` counts as a duplicate                       | ValueError, original kept              | Adds the trimmed case                                               |
+| TS-16   | FR-08       | Lookup contract                  | Negative                   | Unknown vs blank appointment ID                      | LookupError / ValueError               | Not covered                                                         |
+| TS-17   | FR-05       | AC-04.1                          | Negative                   | Exact clash rejected                                 | ValueError, only first saved           | Supplied doesn't check the list after                               |
+| TS-18   | FR-05       | AC-04.2                          | Positive                   | Other practitioner allowed                           | Both saved                             | Adds list check                                                     |
+| TS-19   | FR-05       | Exact-time contract              | Boundary                   | One minute later isn't a clash                       | Booking saved                          | Not covered                                                         |
+| TS-20   | FR-05/07    | SCHEDULED-only conflict, AC-05.2 | Boundary                   | Cancelled booking frees the slot                     | Rebook works, old one kept             | Not covered                                                         |
+| TS-21   | FR-06       | AC-05.1                          | Positive                   | Cancel through the service                           | Same object, CANCELLED                 | Stage 6 TODO                                                        |
+| TS-22   | FR-07       | AC-05.2                          | Positive                   | History kept after cancel                            | Found and listed                       | Stage 6 TODO                                                        |
+| TS-23   | FR-06       | AC-05.3                          | Negative                   | Repeat cancel through the service                    | ValueError, still saved                | Stage 6 TODO                                                        |
+| TS-24   | FR-06       | Cancel contract                  | Negative                   | COMPLETED can't be cancelled through service         | ValueError, still COMPLETED            | Not covered                                                         |
+| TS-25   | FR-06       | Cancel contract                  | Negative                   | Unknown or blank ID                                  | LookupError / ValueError, A1 unchanged | Not covered                                                         |
+| TS-26   | FR-06       | AC-05.1                          | Positive                   | Only the chosen appointment is cancelled             | A2 stays SCHEDULED                     | Not covered                                                         |
 
 ## D Arrange Act Assert Record
 
 Arrange test data; act on one meaningful behaviour; assert the required observable outcome. Use the specific current exception with pytest.raises where needed.
 
-| Test ID | Arrange                                                                  | Act                                                    | Assert                                                                                                     | Why meaningful / why assertion proves criterion                                                                                                   |
-|---------|--------------------------------------------------------------------------|--------------------------------------------------------|------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|
-| TD-02   | No state; one invalid ID value per parametrised case                     | `Patient(bad_id, 'Alex Example')`                      | `pytest.raises(ValueError)`                                                                                | Uses the specific documented exception, so a TypeError or silent acceptance would fail the test.                                                  |
-| TD-12   | Fresh SCHEDULED appointment; keep references to its patient/practitioner | `appointment.cancel()`                                 | status `is CANCELLED`; ID, patient (`is`), practitioner (`is`), time unchanged                             | Proves the transition and that cancellation changes only status (BR-07).                                                                          |
-| TD-14   | Appointment constructed with status COMPLETED                            | `appointment.cancel()`                                 | ValueError; status still COMPLETED                                                                         | Proves the guard covers every non-SCHEDULED state, and that failure leaves state unchanged.                                                       |
-| TS-02   | `clinic` fixture: P1 "Alex Example" registered                           | `register_patient('P1' or ' P1 ', 'Replacement Name')` | ValueError; `find_patient('P1') is` original; name unchanged; list has one patient                         | AC-01.2 requires "without overwriting"; checking only the exception would miss an overwrite before the raise.                                     |
-| TS-06   | `clinic` fixture                                                         | `find_patient('P404')`                                 | LookupError; patients list unchanged                                                                       | AC-02.2 "reports absence"; also catches a lookup that creates a placeholder.                                                                      |
-| TS-10   | `clinic` fixture (P1, D1, D2)                                            | `book_appointment('A1','P1','D1',NINE)`                | `find_appointment('A1') is` result; SCHEDULED; patient/practitioner are the registered objects; time; list | AC-03.1 needs storage, not just construction; identity shows the service used the registered objects (BR-04).                                     |
-| TS-15   | P2 registered; A1 booked for D1 at 09:00                                 | Book A2 for D1 at 09:00                                | ValueError; list is `[first]`; A2 absent; first still SCHEDULED                                            | AC-04.1 plus NFR-01: the rejected booking leaves no partial record.                                                                               |
-| TS-18   | A1 booked for D1 at 09:00, then cancelled                                | Book A2 for D1 at 09:00                                | A2 SCHEDULED; A1 still found and CANCELLED                                                                 | Proves only SCHEDULED appointments conflict (BR-05) and history is retained. Fails if the status check is removed from the conflict rule (see J). |
-| TS-19   | A1 booked                                                                | `cancel_appointment('A1')`                             | `result is booked`; CANCELLED; other fields unchanged                                                      | AC-05.1 through the real service workflow; identity proves no copy was made.                                                                      |
-| TS-20   | A1 booked                                                                | `cancel_appointment('A1')`                             | `find_appointment('A1') is booked`, CANCELLED, still in list                                               | AC-05.2 retention; fails if cancellation deletes the record (see J).                                                                              |
-| TS-21   | A1 booked and cancelled                                                  | Cancel A1 again                                        | ValueError; CANCELLED; still in list                                                                       | AC-05.3 rejection plus unchanged state.                                                                                                           |
+| Test ID | Arrange                                   | Act                                             | Assert                                                                             | Why meaningful / why assertion proves criterion                                                                   |
+|---------|-------------------------------------------|-------------------------------------------------|------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------|
+| TD-02   | One bad ID per parametrised case          | `Patient(bad_id, 'Alex Example')`               | `pytest.raises(ValueError)`                                                        | Uses the exact exception, so a TypeError or the ID being accepted would fail the test.                            |
+| TD-13   | A new SCHEDULED appointment               | `appointment.cancel()`                          | Status is CANCELLED, ID, patient, practitioner and time unchanged                  | Shows cancel changes the status and nothing else.                                                                 |
+| TS-02   | `clinic` fixture with P1 "Alex Example"   | Register 'P1' (or ' P1 ') again with a new name | ValueError, `find_patient('P1')` is the original, name the same, still one patient | AC-01.2 says no overwrite, so just checking the error would miss an overwrite that happened before it was raised. |
+| TS-17   | P2 registered, A1 booked for D1 at 09:00  | Book A2 for D1 at 09:00                         | ValueError, list is `[first]`, A2 not found, first still SCHEDULED                 | Shows the rejected booking didn't leave anything behind.                                                          |
+| TS-20   | A1 booked for D1 at 09:00, then cancelled | Book A2 for D1 at 09:00                         | A2 is SCHEDULED, A1 still found and CANCELLED                                      | Shows only SCHEDULED bookings cause a clash, and the cancelled one isn't deleted.                                 |
+| TS-23   | A1 booked and cancelled                   | Cancel A1 again                                 | ValueError, still CANCELLED and still in the list                                  | Checks the rejection and that nothing changed.                                                                    |
 
 ## E Domain Test Evidence
 
 Cover Patient/Practitioner construction and validation; Appointment construction, initial status, cancellation and illegal/repeated transitions. Preserve the four reference intentions described in handout Part C.
 
-| Test ID | Behaviour                                     | Test file/function                                                       | Result                  |
-|---------|-----------------------------------------------|--------------------------------------------------------------------------|-------------------------|
-| TD-01   | Valid patient kept trimmed                    | tests/test_domain.py::test_valid_patient_stores_trimmed_fields           | Passed (1)              |
-| TD-02   | Blank/invalid patient ID rejected             | tests/test_domain.py::test_blank_patient_id_is_rejected                  | Passed (5 parametrised) |
-| TD-03   | Blank patient name rejected                   | tests/test_domain.py::test_blank_patient_name_is_rejected                | Passed (3)              |
-| TD-04   | Valid practitioner kept trimmed               | tests/test_domain.py::test_valid_practitioner_stores_trimmed_fields      | Passed (1)              |
-| TD-05   | Blank practitioner ID/name/specialty rejected | tests/test_domain.py::test_blank_practitioner_fields_are_rejected        | Passed (6)              |
-| TD-06   | New appointment SCHEDULED with given objects  | tests/test_domain.py::test_new_appointment_starts_scheduled              | Passed (1)              |
-| TD-07   | Participants must be real objects             | tests/test_domain.py::test_appointment_requires_real_participant_objects | Passed (1)              |
-| TD-08   | Invalid datetime rejected                     | tests/test_domain.py::test_invalid_appointment_time_is_rejected          | Passed (5)              |
-| TD-09   | Minute-precision time accepted                | tests/test_domain.py::test_minute_precision_time_is_accepted             | Passed (1)              |
-| TD-10   | Non-enum status rejected                      | tests/test_domain.py::test_non_enum_status_is_rejected                   | Passed (1)              |
-| TD-11   | Identity/status read-only                     | tests/test_domain.py::test_identity_and_status_are_read_only             | Passed (1)              |
-| TD-12   | Cancel changes status only                    | tests/test_domain.py::test_cancel_changes_status                         | Passed (1)              |
-| TD-13   | Repeated cancel rejected                      | tests/test_domain.py::test_repeated_cancellation_is_rejected             | Passed (1)              |
-| TD-14   | COMPLETED cannot be cancelled                 | tests/test_domain.py::test_completed_appointment_cannot_be_cancelled     | Passed (1)              |
+| Test ID | Behaviour                                     | Test file/function                                                       | Result     |
+|---------|-----------------------------------------------|--------------------------------------------------------------------------|------------|
+| TD-01   | Valid patient kept trimmed                    | tests/test_domain.py::test_valid_patient_stores_trimmed_fields           | Passed     |
+| TD-02   | Blank/invalid patient ID rejected             | tests/test_domain.py::test_blank_patient_id_is_rejected                  | Passed (5) |
+| TD-03   | Blank patient name rejected                   | tests/test_domain.py::test_blank_patient_name_is_rejected                | Passed (3) |
+| TD-04   | Valid practitioner kept trimmed               | tests/test_domain.py::test_valid_practitioner_stores_trimmed_fields      | Passed     |
+| TD-05   | Blank practitioner ID/name/specialty rejected | tests/test_domain.py::test_blank_practitioner_fields_are_rejected        | Passed (6) |
+| TD-06   | New appointment is SCHEDULED                  | tests/test_domain.py::test_new_appointment_starts_scheduled              | Passed     |
+| TD-07   | Blank appointment ID rejected                 | tests/test_domain.py::test_blank_appointment_id_is_rejected              | Passed (3) |
+| TD-08   | Needs real Patient/Practitioner objects       | tests/test_domain.py::test_appointment_requires_real_participant_objects | Passed     |
+| TD-09   | Invalid time rejected                         | tests/test_domain.py::test_invalid_appointment_time_is_rejected          | Passed (5) |
+| TD-10   | Minute time accepted                          | tests/test_domain.py::test_minute_precision_time_is_accepted             | Passed     |
+| TD-11   | Text status rejected                          | tests/test_domain.py::test_non_enum_status_is_rejected                   | Passed     |
+| TD-12   | IDs and status are read-only                  | tests/test_domain.py::test_identity_and_status_are_read_only             | Passed     |
+| TD-13   | Cancel changes only status                    | tests/test_domain.py::test_cancel_changes_status                         | Passed     |
+| TD-14   | Repeated cancel rejected                      | tests/test_domain.py::test_repeated_cancellation_is_rejected             | Passed     |
+| TD-15   | COMPLETED can't be cancelled                  | tests/test_domain.py::test_completed_appointment_cannot_be_cancelled     | Passed     |
 
 ## F Service Test Evidence
 
 Use fresh shared SmartCareDataStore state, registered objects and completed Stage 6 services.
 
-| Test ID | Behaviour                                | Requirement / criteria          | Test file/function                                                                     | Result     |
-|---------|------------------------------------------|---------------------------------|----------------------------------------------------------------------------------------|------------|
-| TS-01   | Register stores and returns same object  | FR-01 / AC-01.1                 | tests/test_services.py::test_register_patient_stores_and_returns_same_object           | Passed     |
-| TS-02   | Duplicate patient rejected, no overwrite | FR-01 / AC-01.2                 | tests/test_services.py::test_duplicate_patient_id_is_rejected_without_overwrite        | Passed (2) |
-| TS-03   | Patient IDs case-sensitive               | FR-01 / ID contract             | tests/test_services.py::test_patient_ids_are_case_sensitive                            | Passed     |
-| TS-04   | Invalid registration stores nothing      | FR-01 / validation, NFR-01      | tests/test_services.py::test_invalid_patient_registration_leaves_store_unchanged       | Passed (4) |
-| TS-05   | Known patient lookup                     | FR-02 / AC-02.1                 | tests/test_services.py::test_find_known_patient_returns_stored_object                  | Passed (2) |
-| TS-06   | Unknown patient lookup                   | FR-02 / AC-02.2                 | tests/test_services.py::test_find_unknown_patient_raises_lookup_error                  | Passed     |
-| TS-07   | Blank patient lookup                     | FR-02 / validation              | tests/test_services.py::test_find_patient_with_blank_id_raises_value_error             | Passed (2) |
-| TS-08   | Known practitioner lookup                | FR-03 supporting                | tests/test_services.py::test_find_known_practitioner_returns_stored_object             | Passed     |
-| TS-09   | Unknown practitioner lookup              | FR-03 supporting                | tests/test_services.py::test_find_unknown_practitioner_raises_lookup_error             | Passed     |
-| TS-10   | Booking stored and found                 | FR-04, FR-08 / AC-03.1, AC-06.1 | tests/test_services.py::test_book_appointment_stores_scheduled_appointment             | Passed     |
-| TS-11   | Unknown participant blocks booking       | FR-04 / AC-03.2                 | tests/test_services.py::test_booking_unknown_participant_is_rejected                   | Passed (2) |
-| TS-12   | Invalid time stores nothing              | FR-04 / datetime contract       | tests/test_services.py::test_booking_invalid_time_is_rejected_without_storing          | Passed (2) |
-| TS-13   | Spaced duplicate appointment rejected    | FR-04 / BR-03                   | tests/test_services.py::test_duplicate_appointment_id_with_spaces_is_rejected          | Passed     |
-| TS-14   | Unknown/blank appointment lookup         | FR-08 / lookup contract         | tests/test_services.py::test_find_unknown_appointment_raises_lookup_error              | Passed     |
-| TS-15   | Exact conflict rejected                  | FR-05 / AC-04.1                 | tests/test_services.py::test_same_practitioner_same_time_conflict_is_rejected          | Passed     |
-| TS-16   | Other practitioner same time allowed     | FR-05 / AC-04.2                 | tests/test_services.py::test_different_practitioner_same_time_is_allowed               | Passed     |
-| TS-17   | One minute later allowed                 | FR-05 / BR-05                   | tests/test_services.py::test_same_practitioner_one_minute_later_is_allowed             | Passed     |
-| TS-18   | Cancelled booking frees slot             | FR-05, FR-07 / BR-05            | tests/test_services.py::test_cancelled_booking_does_not_occupy_the_slot                | Passed     |
-| TS-19   | Service cancel                           | FR-06 / AC-05.1                 | tests/test_services.py::test_cancel_appointment_changes_status_and_returns_same_object | Passed     |
-| TS-20   | History retained                         | FR-07 / AC-05.2                 | tests/test_services.py::test_cancelled_appointment_remains_retrievable                 | Passed     |
-| TS-21   | Repeat cancel rejected                   | FR-06 / AC-05.3                 | tests/test_services.py::test_repeated_cancellation_is_rejected_without_change          | Passed     |
-| TS-22   | COMPLETED cancel rejected                | FR-06 / BR-06                   | tests/test_services.py::test_completed_appointment_cancellation_is_rejected            | Passed     |
-| TS-23   | Unknown/blank cancel, no side effect     | FR-06 / cancel contract         | tests/test_services.py::test_cancel_unknown_or_blank_id_leaves_appointments_unchanged  | Passed     |
+| Test ID | Behaviour                              | Requirement / criteria                 | Test file/function                                                                     | Result     |
+|---------|----------------------------------------|----------------------------------------|----------------------------------------------------------------------------------------|------------|
+| TS-01   | Register saves the patient             | FR-01 / AC-01.1                        | tests/test_services.py::test_register_patient_stores_and_returns_same_object           | Passed     |
+| TS-02   | Duplicate patient rejected             | FR-01 / AC-01.2                        | tests/test_services.py::test_duplicate_patient_id_is_rejected_without_overwrite        | Passed (2) |
+| TS-03   | Patient IDs case-sensitive             | FR-01 / ID contract                    | tests/test_services.py::test_patient_ids_are_case_sensitive                            | Passed     |
+| TS-04   | Bad registration saves nothing         | FR-01 / validation contract            | tests/test_services.py::test_invalid_patient_registration_leaves_store_unchanged       | Passed (4) |
+| TS-05   | Find known patient                     | FR-02 / AC-02.1                        | tests/test_services.py::test_find_known_patient_returns_stored_object                  | Passed (2) |
+| TS-06   | Find unknown patient                   | FR-02 / AC-02.2                        | tests/test_services.py::test_find_unknown_patient_raises_lookup_error                  | Passed     |
+| TS-07   | Find blank patient ID                  | FR-02 / lookup contract                | tests/test_services.py::test_find_patient_with_blank_id_raises_value_error             | Passed (2) |
+| TS-08   | Find known practitioner                | FR-03 / practitioner lookup            | tests/test_services.py::test_find_known_practitioner_returns_stored_object             | Passed     |
+| TS-09   | Find unknown practitioner              | FR-03 / practitioner lookup            | tests/test_services.py::test_find_unknown_practitioner_raises_lookup_error             | Passed     |
+| TS-10   | Find blank practitioner ID             | FR-03 / practitioner lookup            | tests/test_services.py::test_find_practitioner_with_blank_id_raises_value_error        | Passed     |
+| TS-11   | Spaced duplicate practitioner rejected | FR-03 / duplicate contract             | tests/test_services.py::test_duplicate_practitioner_id_with_spaces_is_rejected         | Passed     |
+| TS-12   | Booking saved and found                | FR-04, FR-08 / AC-03.1, AC-06.1        | tests/test_services.py::test_book_appointment_stores_scheduled_appointment             | Passed     |
+| TS-13   | Unknown participant rejected           | FR-04 / AC-03.2                        | tests/test_services.py::test_booking_unknown_participant_is_rejected                   | Passed (2) |
+| TS-14   | Bad time saves nothing                 | FR-04 / datetime contract              | tests/test_services.py::test_booking_invalid_time_is_rejected_without_storing          | Passed (2) |
+| TS-15   | Spaced duplicate appointment rejected  | FR-04 / duplicate contract             | tests/test_services.py::test_duplicate_appointment_id_with_spaces_is_rejected          | Passed     |
+| TS-16   | Unknown/blank appointment lookup       | FR-08 / lookup contract                | tests/test_services.py::test_find_unknown_appointment_raises_lookup_error              | Passed     |
+| TS-17   | Exact clash rejected                   | FR-05 / AC-04.1                        | tests/test_services.py::test_same_practitioner_same_time_conflict_is_rejected          | Passed     |
+| TS-18   | Other practitioner allowed             | FR-05 / AC-04.2                        | tests/test_services.py::test_different_practitioner_same_time_is_allowed               | Passed     |
+| TS-19   | One minute later allowed               | FR-05 / exact-time contract            | tests/test_services.py::test_same_practitioner_one_minute_later_is_allowed             | Passed     |
+| TS-20   | Cancelled booking frees slot           | FR-05, FR-07 / SCHEDULED-only conflict | tests/test_services.py::test_cancelled_booking_does_not_occupy_the_slot                | Passed     |
+| TS-21   | Cancel through service                 | FR-06 / AC-05.1                        | tests/test_services.py::test_cancel_appointment_changes_status_and_returns_same_object | Passed     |
+| TS-22   | Cancelled history kept                 | FR-07 / AC-05.2                        | tests/test_services.py::test_cancelled_appointment_remains_retrievable                 | Passed     |
+| TS-23   | Repeat cancel rejected                 | FR-06 / AC-05.3                        | tests/test_services.py::test_repeated_cancellation_is_rejected_without_change          | Passed     |
+| TS-24   | COMPLETED cancel rejected              | FR-06 / cancel contract                | tests/test_services.py::test_completed_appointment_cancellation_is_rejected            | Passed     |
+| TS-25   | Unknown/blank cancel changes nothing   | FR-06 / cancel contract                | tests/test_services.py::test_cancel_unknown_or_blank_id_leaves_appointments_unchanged  | Passed     |
+| TS-26   | Cancelling one leaves others alone     | FR-06 / AC-05.1                        | tests/test_services.py::test_cancelling_one_appointment_leaves_others_scheduled        | Passed     |
 
 ## G Negative and Boundary Cases
 
 Connect cases to actual contracts and verify unchanged state after rejection.
 
-| Behaviour                    | Boundary/invalid input                                           | Expected result                                | Test ID                    |
-|------------------------------|------------------------------------------------------------------|------------------------------------------------|----------------------------|
-| Patient ID validation        | `''`, `'   '`, `'\t\n'`, `None`, `101`                           | ValueError                                     | TD-02                      |
-| Required patient name        | `''`, `'   '`, `None`                                            | ValueError                                     | TD-03                      |
-| Required practitioner fields | Each of ID/name/specialty as `''` or `'   '`                     | ValueError                                     | TD-05                      |
-| Appointment time             | tz-aware, 09:00:01, 09:00:00.000001, text, None                  | ValueError                                     | TD-08                      |
-| Appointment time (inside)    | 23:59 with zero seconds                                          | Accepted unchanged                             | TD-09                      |
-| Status type                  | `'scheduled'` text                                               | ValueError                                     | TD-10                      |
-| Read-only identity           | Assign to patient_id / practitioner_id / appointment_id / status | AttributeError; values unchanged               | TD-11                      |
-| Duplicate patient            | `'P1'` and `' P1 '`                                              | ValueError; original object and name kept      | TS-02                      |
-| Case-sensitive ID            | `'p1'` when `'P1'` exists                                        | Accepted as a new patient                      | TS-03                      |
-| Invalid registration         | Blank ID or name                                                 | ValueError; patient list unchanged             | TS-04                      |
-| Lookup error types           | `'P404'` vs `''` / `'   '`                                       | LookupError vs ValueError; nothing created     | TS-06, TS-07, TS-09, TS-14 |
-| Unknown participant          | P404 or D404                                                     | LookupError; no appointment stored             | TS-11                      |
-| Invalid booking time         | 09:00:30, text                                                   | ValueError; no appointment stored              | TS-12                      |
-| Duplicate appointment        | `' A1 '`                                                         | ValueError; original unchanged                 | TS-13                      |
-| Exact conflict               | D1 at 09:00 when D1 09:00 SCHEDULED                              | ValueError; only first stored, still SCHEDULED | TS-15                      |
-| Conflict edge                | D1 at 09:01                                                      | Allowed                                        | TS-17                      |
-| Conflict status edge         | D1 at 09:00 when D1 09:00 is CANCELLED                           | Allowed; cancelled record kept                 | TS-18                      |
-| Repeated cancel              | Cancel A1 twice                                                  | ValueError; stays CANCELLED and stored         | TD-13, TS-21               |
-| COMPLETED cancel             | COMPLETED fixture                                                | ValueError; stays COMPLETED                    | TD-14, TS-22               |
-| Unknown/blank cancel         | `'A404'`, `'   '`                                                | LookupError / ValueError; A1 stays SCHEDULED   | TS-23                      |
+| Behaviour                     | Boundary/invalid input                                         | Expected result                              | Test ID                           |
+|-------------------------------|----------------------------------------------------------------|----------------------------------------------|-----------------------------------|
+| Patient ID                    | `''`, `'   '`, `'\t\n'`, `None`, `101`                         | ValueError                                   | TD-02                             |
+| Patient name                  | `''`, `'   '`, `None`                                          | ValueError                                   | TD-03                             |
+| Practitioner fields           | Each of ID/name/specialty as `''` or `'   '`                   | ValueError                                   | TD-05                             |
+| Appointment ID                | `''`, `'   '`, `None`                                          | ValueError                                   | TD-07                             |
+| Appointment time              | timezone-aware, 09:00:01, 09:00:00.000001, text, None          | ValueError                                   | TD-09                             |
+| Appointment time (valid edge) | 23:59 with zero seconds                                        | Accepted                                     | TD-10                             |
+| Status                        | `'scheduled'` as text                                          | ValueError                                   | TD-11                             |
+| Read-only fields              | Setting patient_id / practitioner_id / appointment_id / status | AttributeError, values unchanged             | TD-12                             |
+| Duplicate patient             | `'P1'` and `' P1 '`                                            | ValueError, original kept                    | TS-02                             |
+| Case-sensitive ID             | `'p1'` when `'P1'` exists                                      | Accepted as a new patient                    | TS-03                             |
+| Bad registration              | Blank ID or name                                               | ValueError, patient list unchanged           | TS-04                             |
+| Lookup errors                 | `'P404'` / `'D404'` / `'A404'` vs `''` / `'   '`               | LookupError vs ValueError, nothing created   | TS-06, TS-07, TS-09, TS-10, TS-16 |
+| Duplicate practitioner        | `' D1 '`                                                       | ValueError, original kept                    | TS-11                             |
+| Unknown participant           | P404 or D404                                                   | LookupError, nothing stored                  | TS-13                             |
+| Bad booking time              | 09:00:30, text                                                 | ValueError, nothing stored                   | TS-14                             |
+| Duplicate appointment         | `' A1 '`                                                       | ValueError, original kept                    | TS-15                             |
+| Exact clash                   | D1 at 09:00 when D1 09:00 is SCHEDULED                         | ValueError, only first stored                | TS-17                             |
+| Clash edge                    | D1 at 09:01                                                    | Allowed                                      | TS-19                             |
+| Cancelled slot                | D1 at 09:00 when D1 09:00 is CANCELLED                         | Allowed, cancelled one kept                  | TS-20                             |
+| Repeated cancel               | Cancel A1 twice                                                | ValueError, stays CANCELLED and stored       | TD-14, TS-23                      |
+| COMPLETED cancel              | COMPLETED appointment                                          | ValueError, stays COMPLETED                  | TD-15, TS-24                      |
+| Unknown/blank cancel          | `'A404'`, `'   '`                                              | LookupError / ValueError, A1 stays SCHEDULED | TS-25                             |
 
 ## H GitHub Copilot Test Design
 
 Select ONE real acceptance criterion. Complete human-first fields before using Copilot. Do not require an accepted generated test.
 
-Requirement: FR-06
+Requirement: FR-06 Cancel appointment
 <br></br>
-Acceptance criterion: Repeated cancellation is rejected.
+Acceptance criterion: AC-05.3 Repeated cancellation is rejected.
 <br></br>
-Behaviour to test: Cancelling an appointment that is already cancelled, raises ValueError and leaves the appointment cancelled and still stored.
+Behaviour to test: Cancelling an appointment that's already cancelled raises ValueError, and the appointment stays cancelled and still saved.
 <br></br>
 Human-first test idea/categories:
 
-| Idea                              | Type     | Expected result                                                   | Test  |
-|-----------------------------------|----------|-------------------------------------------------------------------|-------|
-| Cancel a scheduled appointment    | Valid    | Status becomes `CANCELLED`                                        | TS-19 |
-| Cancel the same appointment again | Invalid  | `ValueError`; appointment remains `CANCELLED` and is still stored | TS-21 |
-| Cancel a `COMPLETED` appointment  | Boundary | `ValueError`; appointment remains `COMPLETED`                     | TS-22 |
-| Cancel an unknown appointment ID  | Boundary | `LookupError`                                                     | TS-23 |
+| Idea                              | Type     | Expected result                             | Test  |
+|-----------------------------------|----------|---------------------------------------------|-------|
+| Cancel a scheduled appointment    | Valid    | Status becomes CANCELLED                    | TS-21 |
+| Cancel the same appointment again | Invalid  | ValueError, stays CANCELLED and still saved | TS-23 |
+| Cancel a COMPLETED appointment    | Boundary | ValueError, stays COMPLETED                 | TS-24 |
+| Cancel an unknown appointment ID  | Boundary | LookupError                                 | TS-25 |
 
-Prompt and purpose: 
-<br></br>"Act as a software test-design assistant.Requirement: FR-06 Cancel only a SCHEDULED appointment.Acceptance criterion: AC-05.3 Repeated cancellation is rejected.Propose pytest test candidates covering a valid case, an invalid case and meaningful boundaries. For each candidate, state exactly which required behaviour it is intended to verify. Do not invent behaviour not stated in the requirement or criterion. Use observable outcomes rather than private implementation details. Use the current SmartCare public contracts and shared SmartCareDataStore. Do not introduce SQLite, repository abstractions or unrelated features. Do not claim that a proposed test has been executed."
+Prompt and purpose:
+<br></br>"Act as a software test-design assistant. Requirement: FR-06 Cancel only a SCHEDULED appointment. Acceptance criterion: AC-05.3 Repeated cancellation is rejected. Propose pytest test candidates covering a valid case, an invalid case and meaningful boundaries. For each candidate, state exactly which required behaviour it is intended to verify. Do not invent behaviour not stated in the requirement or criterion. Use observable outcomes rather than private implementation details. Use the current SmartCare public contracts and shared SmartCareDataStore. Do not introduce SQLite, repository abstractions or unrelated features. Do not claim that a proposed test has been executed."
 
 **Candidate 1**
-- Copilot test idea/candidate: `test_cancel_scheduled_appointment_succeeds`. A SCHEDULED appointment in the store is cancelled through the public operation.
-- What it claims to verify: FR-06, a SCHEDULED appointment can be cancelled, "appointment is no longer SCHEDULED when retrieved".
-- Requirement trace: FR-06/AC-05.1.
-- Assertion quality: Weak
-- Human critique: Good idea, but it duplicates our TS-19, which asserts `status is CANCELLED` and `result is booked`.
+- Copilot test idea/candidate: `test_cancel_scheduled_appointment_succeeds`. Cancel a SCHEDULED appointment in the store.
+- What it claims to verify: A SCHEDULED appointment can be cancelled, it is "no longer SCHEDULED when retrieved".
+- Requirement trace: FR-06 / AC-05.1
+- Assertion quality: Weak, it only checks the status isn't SCHEDULED, not that it's CANCELLED.
+- Human critique: Good idea, but it's the same as our TS-21, which checks the status is CANCELLED and the same object comes back.
 - Decision: Reject
-- Reason: Duplicate of TS-19 with a weaker assertion.
+- Reason: Duplicate of TS-21 with a weaker assertion.
 - Final test reference if accepted/modified: None
-- Actual verification result: Not run as a Copilot test. Instead, TS-19 run: passed.
+- Actual verification result: Not run as a Copilot test. TS-21 was run instead: passed.
 
-- **Candidate 2**
+**Candidate 2**
 - Copilot test idea/candidate: `test_repeated_cancellation_of_same_appointment_is_rejected`. Cancel an appointment that was already cancelled.
-- What it claims to verify: AC-05.3, the repeated cancellation request is rejected.
-- Requirement trace: FR-06/AC-05.3.
+- What it claims to verify: AC-05.3, the second cancel is rejected.
+- Requirement trace: FR-06 / AC-05.3
 - Assertion quality: Weak
-- Human critique: The right thing to test, but it ignores the documented exception and the "leave state unchanged" contract.
+- Human critique: Right thing to test, but it doesn't expect ValueError and doesn't check the appointment afterwards.
 - Decision: Reject
-- Reason: Our TS-21 already tests this behaviour better.
+- Reason: Our TS-23 already tests this better.
 - Final test reference if accepted/modified: None
-- Actual verification result: Not run as a Copilot test. Instead, TS-21 run: passed.
+- Actual verification result: Not run as a Copilot test. TS-23 was run instead: passed.
 
-- **Candidate 3**
-- Copilot test idea/candidate: `test_second_cancellation_does_not_change_result_of_first_cancellation`. After a successful cancel, submit a second cancel and retrieve the appointment.
-- What it claims to verify: A rejected second cancellation does not alter the first one, the appointment stays in its post-cancellation state.
-- Requirement trace: FR-06/AC-05.3.
-- Assertion quality: Good idea again. As it checks state after rejection, which candidate 2 missed.
-- Human critique: Good but as a separate test it repeats candidate 2's setup and action. The state check belongs in the same test as the rejection.
+**Candidate 3**
+- Copilot test idea/candidate: `test_second_cancellation_does_not_change_result_of_first_cancellation`. Cancel, cancel again, then look the appointment up.
+- What it claims to verify: The rejected second cancel doesn't change anything.
+- Requirement trace: FR-06 / AC-05.3
+- Assertion quality: OK, it checks the state after the rejection, which candidate 2 missed.
+- Human critique: As its own test it repeats candidate 2's setup. The state check should be in the same test as the rejection.
 - Decision: Reject
-- Reason: Already covered in TS-21.
+- Reason: Already covered by TS-23.
 - Final test reference if accepted/modified: None
-- Actual verification result: Not run as a Copilot test. Covering test TS-21 run: passed.
+- Actual verification result: Not run as a Copilot test. TS-23 was run instead: passed.
 
 Before accepting: traces to a requirement/criterion; can fail for the right reason; assertion checks required behaviour; no invented business rule; no unnecessary private implementation dependence. Reject/modify weak assertions, invented requirements, excessive mocking, duplicates, wrong exceptions, obsolete architecture and unnecessary dependencies.
 
 ## I Weak Copilot Test Reflection
 
-**Which Copilot-generated test looked convincing but was weak?** Candidate 2, `test_repeated_cancellation_of_same_appointment_is_rejected`. It has the right name and traces straight to AC-05.3.
+**Which Copilot-generated test looked convincing but was weak?** Candidate 2, `test_repeated_cancellation_of_same_appointment_is_rejected`. It has the right name and traces back to AC-05.3.
 
 **Why was it weak?** Copilot's note told us not to assume a specific exception, so "rejected" would become `pytest.raises(Exception)`. That passes for any error, even the wrong one, and it never checks the appointment afterwards.
 
-**How did you strengthen it?** Our version (TS-21) expects the documented `ValueError`, then checks if the appointment is still CANCELLED and is still saved.
+**How did you strengthen it?** Our version (TS-23) expects the documented `ValueError`, then checks if the appointment is still CANCELLED and is still saved.
 
 **Accepted / modified / rejected test decisions and evidence:** All three candidates were rejected. Each one duplicated a human-designed test but weaker.
 
@@ -329,20 +340,20 @@ Before accepting: traces to a requirement/criterion; can fail for the right reas
 
 Run python -m pytest from project/. Retain all accumulated tests. Record the tested SHA accurately.
 
-| Command            | Working directory | Code SHA                                 | Passed | Failed | Failure summary | Product defect / test defect / unresolved | Evidence and interpretation           |
-|--------------------|-------------------|------------------------------------------|--------|--------|-----------------|-------------------------------------------|---------------------------------------|
-| `python -m pytest` | project/          | 9271a404479c57fd1003f27dbc537b37b58395fa | 8      | 0      | None            | None                                      | Stage 6 works cleanly with no issues. |
-| `python -m pytest` | project/          | ...                                      | 74     | 0      | None            | None                                      | Stage 7 works cleanly with no issues. |
+| Command            | Working directory | Code SHA                                 | Passed | Failed | Failure summary | Product defect / test defect / unresolved | Evidence and interpretation                                 |
+|--------------------|-------------------|------------------------------------------|--------|--------|-----------------|-------------------------------------------|-------------------------------------------------------------|
+| `python -m pytest` | project/          | 9271a404479c57fd1003f27dbc537b37b58395fa | 8      | 0      | None            | None                                      | Stage 6 baseline before our tests, all supplied tests pass. |
+| `python -m pytest` | project/          | b8029b0adb82d8beae7cb5de424037445a2cf552 | 74     | 0      | None            | None                                      | Stage 7, all 8 starter tests and our new tests pass.        |
 
-Individual test runs and changed-order independence evidence:  
-- Per file: `python -m pytest tests/test_starter.py` had 8 passed, `tests/test_domain.py` had 32 passed, `tests/test_services.py` had 34 passed.
-- Individual: `python -m pytest tests/test_domain.py::test_blank_patient_id_is_rejected` had 5 passed, `tests/test_services.py::test_repeated_cancellation_is_rejected_without_change` had 1 pass, `tests/test_services.py::test_cancelled_booking_does_not_occupy_the_slot` had 1 pass.
-- Every new test function was also run on its own with its node ID: 37 ran, 0 failed.  
+Individual test runs and changed-order independence evidence:
+- Per file: `python -m pytest tests/test_starter.py` 8 passed, `tests/test_domain.py` 32 passed, `tests/test_services.py` 34 passed.
+- Individual: each of our 41 new test functions (15 in test_domain.py, 26 in test_services.py) was run on its own with its ID, e.g. `python -m pytest tests/test_services.py::test_cancelled_booking_does_not_occupy_the_slot`. All passed.
+- Changed order: we ran all the IDs from test_domain.py and test_services.py in reverse order in one command, 66 passed. So the tests don't depend on each other. 
 
 Optional tutor-led demonstration notes: ...
 
 A meaningful test should detect a relevant incorrect result. Students do not have to perform the demonstration or submit failure/restoration evidence for assessment. The tutor restores the example and reruns its tests. This is not a Stage 8 fault activity.
-Requirement → test → failure/observation → diagnosis → change → verification: [concise links where applicable]
+Requirement → test → failure/observation → diagnosis → change → verification: No tests failed in stage 7, so there was nothing to diagnose or change.
 
 ## K What the Suite Still Does Not Prove
 
@@ -358,17 +369,17 @@ Requirement → test → failure/observation → diagnosis → change → verifi
 
 Use links rather than copying GitHub history. Continue the Stage 6 workflow; no commit/PR count, conflict or individual test quota is imposed.
 
-| Issue/task | Branch | PR | Reviewer | Key feedback | Outcome |
-|---|---|---|---|---|---|
-| [complete] | [complete] | [complete] | [complete] | [complete] | [complete] |
+| Issue/task                                       | Branch                    | PR   | Reviewer      | Key feedback  | Outcome                                                                                                                                                                                           |
+|--------------------------------------------------|---------------------------|------|---------------|---------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Stage 7 domain and service tests and this record | main (no separate branch) | None | None recorded | None recorded | Committed straight to main: [b8029b0](https://github.com/BenP64/st1-assignment-3/commit/b8029b0adb82d8beae7cb5de424037445a2cf552) "Stage 7 upload - evidence mostly complete, test code included" |
 
 ## M Contribution Evidence
 
 Record actual work in test design, implementation, review, traceability, diagnosis, necessary fixes and integration. Do not include confidential peer ratings.
 
-| Member | Actual contribution | Evidence link |
-|---|---|---|
-| [complete] | [complete] | [complete] |
+| Member          | Actual contribution                                                                                     | Evidence link                                                                                         |
+|-----------------|---------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------|
+| Ben Parnell     | Wrote the Stage 7 tests in test_domain.py and test_services.py, ran the suite and filled in this record | [b8029b0](https://github.com/BenP64/st1-assignment-3/commit/b8029b0adb82d8beae7cb5de424037445a2cf552) |
 
 ## N Formative Questions
 
@@ -404,9 +415,9 @@ Every test must trace to a real requirement and show which required behaviour it
 
 ## O Stage Completion
 
-Tested Stage 7 main SHA: [complete]
-Full-suite result: [complete]
-Unresolved defects and effect on baseline: [complete or none]
-Clean working tree and integration evidence: [complete]
-Stage 8 handover status: [complete; no Stage 8 work assigned]
-All tutorial/formative responses and traceability/Copilot decisions complete: [confirm]
+Tested Stage 7 main SHA: b8029b0adb82d8beae7cb5de424037445a2cf552
+Full-suite result: `python -m pytest` from project/, 74 passed, 0 failed.
+Unresolved defects and effect on baseline: None. No product or test defects were found in Stage 7.
+Clean working tree and integration evidence: The tests and record were committed and pushed to main as b8029b0. This record was updated afterwards as an evidence-only change, no code was changed.
+Stage 8 handover status: Ready. Stage 8 started from this commit (2d4b8df "Prepare stage 08 Debug" has b8029b0 as its parent). No Stage 8 work was done in Stage 7.
+All tutorial/formative responses and traceability/Copilot decisions complete: Yes, A to K and N are done. L and M still need the group to check.
