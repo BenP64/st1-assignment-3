@@ -379,6 +379,11 @@ The table below shows what the console printed when we ran these inputs at `ece8
 - **Review & Design** Reviewed the specifications for patient searches and made verified the procedure adhered to the service duty of retrieval only, without generating or altering patient information.
 - **Integration:** Merged the patient search modifications with the main branch and confirmed that, following integration, all tests, both new and old, continued to pass. 
 
+**Lachlan O'Meara**
+- **Test:** Wrote the Stage 8 regression tests (`project/tests/test_regressions.py`) for F8-01 and F8-02, confirmed they failed for the right reasons before repair and passed after, and ran the full suite before and after each change (76 passed). Also wrote the Stage 6 appointment cancellation tests.
+- **Review & Design:** Recorded my own hypotheses for both defects before using Copilot, then checked each of Copilot's six suggestions against evidence from check scripts and accepted or rejected them. Chose and justified the Stage 8 refactor (replacing the `"scheduled"` magic string with `AppointmentStatus.SCHEDULED`) without changing behaviour. Acted as the other-member reviewer in Stage 6.
+- **Integration:** Prepared the Stage 8 debugging branch with the tutor's tool, made the two minimal repairs and the refactor as separate commits, created issues #7–#9, and integrated the work through PRs #4 and #10, then retested on `main`.
+
 Optional bounded-change practice only: validation rule, focused test, safe error-message change, explicit-input query or agreed status rule with test. Explain expected impact before editing, make a small change, run the test, and identify evidence to inspect if unsure. No live AI unless explicitly permitted. Preserve the submitted candidate.
 
 Practice question/change and reasoning: ...
