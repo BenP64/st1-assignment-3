@@ -147,19 +147,21 @@ Final human conclusion and comparison with initial hypothesis: [complete]
 | Checkpoint | Code SHA or precise diff | Command and working directory | Actual result and artefact reference |
 |---|---|---|---|
 | F8-01 before repair | [c5200cf] | [python -m pytest -q tests/test_regressions.py] | [FAILED tests/test_regressions.py::test_f8_01_same_practitioner_same_time_rejected_without_change - Failed: DID NOT RAISE ValueError] |
-| F8-01 after repair | [complete] | [complete] | [complete] |
+| F8-01 after repair | [1ad49a2] | [python -m pytest -q tests/test_regressions.py] | [FAILED tests/test_regressions.py::test_f8_02_cancelled_appointment_is_retained_and_found - AssertionError: assert None is <smartcare.domain.Appointment object at 0x00000227C6190BC0>
+1 failed, 1 passed in 0.19s] |
 | F8-02 before repair | [c5200cf] | [python -m pytest -q tests/test_regressions.py] | [FAILED tests/test_regressions.py::test_f8_02_cancelled_appointment_is_retained_and_found - AssertionError: assert None is <smartcare.domain.Appointment object at 0x000001D8F7C951F0>] |
-| F8-02 after repair | [complete] | [complete] | [complete] |
-| Full suite after both repairs, before refactor | [complete] | [complete] | [complete] |
+| F8-02 after repair | [9084282] | [python -m pytest -q tests/test_regressions.py] | [2 passed in 0.02s] |
+| Full suite after both repairs, before refactor | [9084282] | [python -m pytest -q] | [76 passed in 0.13s] |
 
-Explain how the assertions detect each relevant incorrect result and protect previous behaviour: [complete]
-Unrelated failures investigated / resolution: [complete or not applicable with reason]
+Explain how the assertions detect each relevant incorrect result and protect previous behaviour: [F8-01: `pytest.raises(ValueError)` catches the faulty code accepting a second D1 booking at 09:00. The test also checks nothing was stored by the rejected booking, and that D2 at 09:00 is still allowed (AC-04.2).
+F8-02: `assert store.find_appointment('A1') is booked` catches the faulty code returning None after cancellation. The test also checks the status is CANCELLED, the appointment is still listed and findable through the service (FR-07/AC-05.2), and a second cancel is rejected without changes (BR-07).]
+Unrelated failures investigated / resolution: [None. All 7 initial failures were caused by the two defects: 4 conflict tests passed after the F8-01 repair, and the 3 cancellation tests passed after the F8-02 repair. Full suite after both: 76 passed.]
 
 ## H. Refactoring decision and before/after verification
 
-Smell and exact location: [complete]
-Small proposed structural change / why justified: [complete before editing]
-External behaviour to preserve / relevant tests: [complete]
+Smell and exact location: [Magic string `"scheduled"` in `has_practitioner_conflict`, `project/smartcare/data_store.py` line 112 (`appointment.status.value == "scheduled"`).]
+Small proposed structural change / why justified: [Replace it with the existing enum, `appointment.status is AppointmentStatus.SCHEDULED`. This matches the rest of the code, avoids typos in a raw string, and stays correct if the enum's text value ever changes.]
+External behaviour to preserve / relevant tests: [ A same-practitioner SCHEDULED booking is still a conflict, a different practitioner is still allowed, a cancelled booking does not block the slot, and the check changes nothing. Covered by `tests/test_regressions.py` and the conflict tests in `tests/test_services.py`]
 Before result: see G, full passing suite.
 Actual change / diff / separate refactor SHA: [complete]
 Focused and full after-refactor commands / working directory / results / evidence: [complete]
