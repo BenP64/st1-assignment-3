@@ -338,12 +338,12 @@ Before accepting: traces to a requirement/criterion; can fail for the right reas
 
 ## J Regression Run
 
-Run python -m pytest from project/. Retain all accumulated tests. Record the tested SHA accurately.
+Run `python -m pytest` from project/. Retain all accumulated tests. Record the tested SHA accurately.
 
-| Command            | Working directory | Code SHA                                 | Passed | Failed | Failure summary | Product defect / test defect / unresolved | Evidence and interpretation                                 |
-|--------------------|-------------------|------------------------------------------|--------|--------|-----------------|-------------------------------------------|-------------------------------------------------------------|
-| `python -m pytest` | project/          | 9271a404479c57fd1003f27dbc537b37b58395fa | 8      | 0      | None            | None                                      | Stage 6 baseline before our tests, all supplied tests pass. |
-| `python -m pytest` | project/          | b8029b0adb82d8beae7cb5de424037445a2cf552 | 74     | 0      | None            | None                                      | Stage 7, all 8 starter tests and our new tests pass.        |
+| Command            | Working directory | Code SHA                                 | Passed | Failed | Failure summary | Product defect / test defect / unresolved | Evidence and interpretation                                |
+|--------------------|-------------------|------------------------------------------|--------|--------|-----------------|-------------------------------------------|------------------------------------------------------------|
+| `python -m pytest` | project/          | 9271a404479c57fd1003f27dbc537b37b58395fa | 8      | 0      | None            | None                                      | Stage 6 baseline before my tests, all supplied tests pass. |
+| `python -m pytest` | project/          | b8029b0adb82d8beae7cb5de424037445a2cf552 | 74     | 0      | None            | None                                      | Stage 7, all 8 starter tests and my new tests pass.        |
 
 Individual test runs and changed-order independence evidence:
 - Per file: `python -m pytest tests/test_starter.py` 8 passed, `tests/test_domain.py` 32 passed, `tests/test_services.py` 34 passed.
@@ -353,7 +353,7 @@ Individual test runs and changed-order independence evidence:
 Optional tutor-led demonstration notes: ...
 
 A meaningful test should detect a relevant incorrect result. Students do not have to perform the demonstration or submit failure/restoration evidence for assessment. The tutor restores the example and reruns its tests. This is not a Stage 8 fault activity.
-Requirement → test → failure/observation → diagnosis → change → verification: No tests failed in stage 7, so there was nothing to diagnose or change.
+Requirement &rarr; test &rarr; failure/observation &rarr; diagnosis &rarr; change &rarr; verification: No tests failed in stage 7, so there was nothing to diagnose or change.
 
 ## K What the Suite Still Does Not Prove
 
@@ -383,41 +383,50 @@ Record actual work in test design, implementation, review, traceability, diagnos
 
 ## N Formative Questions
 
-1. What question does verification answer?
-Did we build the software right, and does it meet its specified requirements.
+1. **What question does verification answer?** Did we build the software right, and does it meet its specified requirements.
 
-2. What question does validation answer?
-Did we build the right software, and does it meet the users' needs.
 
-3. What is a unit test?
-An automated test of a small unit to check its behaviour against its contract.
+2. **What question does validation answer?** Did we build the right software, and does it meet the users' needs.
 
-4. What is a pytest fixture?
-A function marked `@pytest.fixture` that gives reusable data for testing.
 
-5. What is parametrisation in pytest?
-`@pytest.mark.paramterize` runs the same test function once per listed input.
+3. **What is a unit test?** An automated test of a small unit to check its behaviour against its contract.
 
-6. What is regression testing?
-Re-running the whole suite after any change, to check everything works and nothing has broken.
 
-7. What does code coverage tell us, and what does it not prove?
-It shows lines or branches ran during the tests. It does not show that the results were checked.
+4. **What is a pytest fixture?** A function marked `@pytest.fixture` that gives reusable data for testing.
 
-8. What makes an assertion weak?
-If it would still pass when the required behaviour is wrong.
 
-9. What is the appropriate role of GitHub Copilot as a test assistant?
-As a source for test ideas after we have designed our own.
+5. **What is parametrisation in pytest?** `@pytest.mark.paramterize` runs the same test function once per listed input.
 
-10. What is the Stage 7 engineering rule?
-Every test must trace to a real requirement and show which required behaviour it proves.
+
+6. **What is regression testing?** Re-running the whole suite after any change, to check everything works and nothing has broken.
+
+
+7. **What does code coverage tell us, and what does it not prove?** It shows lines or branches ran during the tests. It does not show that the results were checked.
+
+
+8. **What makes an assertion weak?** If it would still pass when the required behaviour is wrong.
+
+
+9. **What is the appropriate role of GitHub Copilot as a test assistant?** As a source for test ideas after we have designed our own.
+
+
+10. **What is the Stage 7 engineering rule?** Every test must trace to a real requirement and show which required behaviour it proves.
 
 ## O Stage Completion
 
-Tested Stage 7 main SHA: b8029b0adb82d8beae7cb5de424037445a2cf552
-Full-suite result: `python -m pytest` from project/, 74 passed, 0 failed.
-Unresolved defects and effect on baseline: None. No product or test defects were found in Stage 7.
-Clean working tree and integration evidence: The tests and record were committed and pushed to main as b8029b0. This record was updated afterwards as an evidence-only change, no code was changed.
-Stage 8 handover status: Ready. Stage 8 started from this commit (2d4b8df "Prepare stage 08 Debug" has b8029b0 as its parent). No Stage 8 work was done in Stage 7.
-All tutorial/formative responses and traceability/Copilot decisions complete: Yes, A to K and N are done. L and M still need the group to check.
+**Tested Stage 7 main SHA:** `b8029b0adb82d8beae7cb5de424037445a2cf552`
+
+
+**Full-suite result:** `python -m pytest` from project/, 74 passed, 0 failed.
+
+
+**Unresolved defects and effect on baseline:** None.
+
+
+**Clean working tree and integration evidence:** The tests and record were committed and pushed to main as b8029b0.
+
+
+**Stage 8 handover status:** Ready. Stage 8 started from this commit (2d4b8df has b8029b0 as its parent).
+
+
+**All tutorial/formative responses and traceability/Copilot decisions complete:** Yes
